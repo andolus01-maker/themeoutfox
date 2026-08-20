@@ -13,6 +13,15 @@ local RowH = 40
 local RowX = IsUsingWideScreen() and 490 or 400
 local RowY = SCREEN_CENTER_Y - (RowAmount * RowH) / 2
 
+-- Modern UI: the row plates are dimmed and the separators pick up the
+-- accent ramp, which turns the score table into a layered, backlit list
+-- instead of a flat stack of pink/blue lines. All values, colour
+-- attributes and high-score highlighting behave exactly as before.
+local Modern = ModernUI and ModernUI.IsModern()
+local RowArtAlpha = Modern and 0.45 or 1
+local SeparatorTone = Modern and ModernUI.Accent(1)
+    or (RowAmount == 9 and color("#FFA4FF") or color("#99D3FF"))
+
 -- And a function to make even better use out of the table.
 local function GetJLineValue(line, pl)
     local PSS = STATSMAN:GetCurStageStats():GetPlayerStageStats(pl)
@@ -56,7 +65,7 @@ local function ColourHighScoreCount(child)
             ColoringProcess[#ColoringProcess+1] = {
                 Start = charindex > 1 and charindex + 1 or 0,
                 Attr = {
-                    Diffuse = color("#1fbcff"),
+                    Diffuse = Modern and ModernUI.Tokens.Good or color("#1fbcff"),
                     Length = m:len()
                 }
             }
@@ -78,6 +87,7 @@ for i = 1, RowAmount do
             Texture=THEME:GetPathG("", "Evaluation/EvalRow"),
             InitCommand=function(self)
                 self:xy(SCREEN_CENTER_X, RowY + RowH * (i - 1) + 24):zoom(0.8)
+                :diffusealpha(RowArtAlpha)
             end
         }
     }
@@ -95,13 +105,15 @@ t[#t+1] = Def.ActorFrame {
             InitCommand=function(self)
                 self:x(-140):halign(1):valign(0):zoom(0.75)
                 :visible(GAMESTATE:IsSideJoined(PLAYER_1))
+                if Modern then self:diffusealpha(0.8) end
             end
         },
 
         Def.Quad {
             InitCommand=function(self)
                 self:xy(-138, RowH):halign(1):valign(0):zoomto(192, 26)
-                :diffuse(Color.Black):diffusealpha(0.5):fadeleft(0.5)
+                :diffuse(Modern and ModernUI.Tokens.Base or Color.Black)
+                :diffusealpha(Modern and 0.62 or 0.5):fadeleft(0.5)
                 :visible(GAMESTATE:IsSideJoined(PLAYER_1))
             end
         },
@@ -120,13 +132,15 @@ t[#t+1] = Def.ActorFrame {
             InitCommand=function(self)
                 self:x(140):halign(0):valign(0):zoom(0.75)
                 :visible(GAMESTATE:IsSideJoined(PLAYER_2))
+                if Modern then self:diffusealpha(0.8) end
             end
         },
 
         Def.Quad {
             InitCommand=function(self)
                 self:xy(138, RowH):halign(0):valign(0):zoomto(192, 26)
-                :diffuse(Color.Black):diffusealpha(0.5):faderight(0.5)
+                :diffuse(Modern and ModernUI.Tokens.Base or Color.Black)
+                :diffusealpha(Modern and 0.62 or 0.5):faderight(0.5)
                 :visible(GAMESTATE:IsSideJoined(PLAYER_2))
             end
         },
@@ -145,6 +159,7 @@ t[#t+1] = Def.ActorFrame {
         Texture=THEME:GetPathG("", "Evaluation/EvalColumn"),
         InitCommand=function(self)
             self:Center()
+            if Modern then self:diffusealpha(0.85) end
         end
     }
 }
@@ -156,8 +171,9 @@ for i = 1, RowAmount + 1 do
             InitCommand=function(self)
                 self:xy(SCREEN_CENTER_X, RowY + RowH * (i - 1) + 24 - (RowH / 2))
                 :zoomto(150 + math.sin(math.abs(self:GetY() - SCREEN_CENTER_Y) / SCREEN_CENTER_Y) * 60, 2)
-                :diffuse(RowAmount == 9 and color("#FFA4FF") or color("#99D3FF"))
+                :diffuse(SeparatorTone)
                 :fadeleft(0.1):faderight(0.1)
+                if Modern then self:blend("BlendMode_Add"):diffusealpha(0.7) end
             end
         }
     }
@@ -178,6 +194,11 @@ for i = 1, RowAmount do
                     self:settext(ToUpper(THEME:GetString("EvaluationLabel", Name[i])))
                 else
                     self:settext(ToUpper(THEME:GetString(CurPrefTiming or "Original" , "Judgment" .. Name[i])))
+                end
+
+                -- Modern: lift the two summary rows out of the judgment list
+                if Modern and (Name[i] == "Accuracy" or Name[i] == "Score") then
+                    self:diffuse(ModernUI.Accent(1))
                 end
             end
         },
@@ -223,6 +244,7 @@ for pn in ivalues(GAMESTATE:GetEnabledPlayers()) do
                 self:diffuse(1,1,1,1):valign(1)
                 :xy((pn == PLAYER_1 and (SCREEN_LEFT + 10) or (SCREEN_RIGHT - 10)), SCREEN_BOTTOM - 90)
                 :halign((pn == PLAYER_1 and 0 or 1))
+                if Modern then self:diffuse(ModernUI.Tokens.Bad) end
             end
         }
     end
