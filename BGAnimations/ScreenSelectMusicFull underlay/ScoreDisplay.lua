@@ -2,6 +2,15 @@ local Scoring = LoadModule("Config.Load.lua")("ScoringSystem", "Save/OutFoxPrefs
 local ClassicGrades = LoadModule("Config.Load.lua")("ClassicGrades", "Save/OutFoxPrefs.ini") and Scoring == "Old"
 local SongIsChosen = false
 
+-- Modern UI: accent glow behind the score plate plus accent-tinted
+-- personal-best figures. The plate art itself is left untouched so the
+-- layout stays pixel-identical.
+local Modern = ModernUI and ModernUI.IsModern()
+local function Dur(seconds)
+    if ModernUI then return ModernUI.T(seconds) end
+    return seconds
+end
+
 local t = Def.ActorFrame {}
 
 for pn in ivalues(GAMESTATE:GetHumanPlayers()) do
@@ -15,13 +24,13 @@ for pn in ivalues(GAMESTATE:GetHumanPlayers()) do
             
             SongChosenMessageCommand=function(self)
                 SongIsChosen = true
-                self:stoptweening():easeoutexpo(0.5)
+                self:stoptweening():easeoutexpo(Dur(0.5))
                 :x(358 * (pn == PLAYER_2 and 1 or -1))
                 self:playcommand("Refresh")
             end,
             SongUnchosenMessageCommand=function(self)
                 SongIsChosen = false
-                self:stoptweening():easeoutexpo(0.5):x(0)
+                self:stoptweening():easeoutexpo(Dur(0.5)):x(0)
             end,
 
             RefreshCommand=function(self)
@@ -64,6 +73,12 @@ for pn in ivalues(GAMESTATE:GetHumanPlayers()) do
                 end
             end,
 
+            -- Soft accent bloom behind the plate
+            Modern and ModernUI.SoftGlow {
+                x = 0, y = 10, zoom = 1.9, alpha = 0.16,
+                pulse = 1.04, period = 6,
+            } or Def.Actor {},
+
             Def.Sprite {
                 -- Texture=THEME:GetPathG("", "UI/ScoreDisplay"),
                 InitCommand=function(self)
@@ -85,6 +100,7 @@ for pn in ivalues(GAMESTATE:GetHumanPlayers()) do
                 InitCommand=function(self)
                     self:xy(90 + CorrectionX, -35):zoom(1):halign(1)
                     :diffuse(Color.White):vertspacing(-6):shadowlength(1)
+                    if Modern then self:diffusetopedge(ModernUI.Accent(1)) end
                 end,
             },
             

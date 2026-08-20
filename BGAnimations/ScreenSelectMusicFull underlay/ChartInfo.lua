@@ -8,6 +8,15 @@ local StatsY = 46
 local SongIsChosen = false
 local PreviewDelay = THEME:GetMetric("ScreenSelectMusic", "SampleMusicDelay")
 
+-- Modern UI: frosted panel behind the radar stats, accent chart heading.
+-- The stats block spans roughly x -353..18 (relative to the player side),
+-- so the card is centred on -167 with a little breathing room.
+local Modern = ModernUI and ModernUI.IsModern()
+local Glass  = ModernUI and ModernUI.UseGlass()
+local StatsCardX = -167
+local StatsCardW = 384
+local StatsCardH = 64
+
 -- Breakdown from Soundwaves (JoseVarelaP, Jousway, Lirodon)
 local GetStreamBreakdown = function(Player)
     if GAMESTATE:GetCurrentSong() and GAMESTATE:GetCurrentSteps(Player) then
@@ -79,6 +88,23 @@ for pn in ivalues(GAMESTATE:GetHumanPlayers()) do
             end
         end,
 
+        -- Frosted card behind the radar stats
+        Glass and ModernUI.GlassCard {
+            x = StatsCardX + PlayerX,
+            y = StatsY + 20,
+            w = StatsCardW, h = StatsCardH,
+            valign = 0.5, alpha = 0.4, accentBar = false,
+        } or Def.Actor {},
+
+        -- Accent rule separating the heading from the stats
+        Modern and ModernUI.Hairline {
+            x = StatsCardX + PlayerX,
+            y = StatsY - 14,
+            w = StatsCardW - 24,
+            color = ModernUI.Accent(1),
+            alpha = 0.55,
+        } or Def.Actor {},
+
         Def.BitmapText {
             Font="Montserrat extrabold 20px",
             Name="ChartInfo",
@@ -88,6 +114,7 @@ for pn in ivalues(GAMESTATE:GetHumanPlayers()) do
                 :skewx(-0.2)
                 :x(-172 + (pn == PLAYER_2 and 345 or 0))
                 :y(13)
+                if Modern then self:diffuse(ModernUI.Tokens.Text) end
             end
         },
 
