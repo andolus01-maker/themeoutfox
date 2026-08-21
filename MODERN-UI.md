@@ -28,6 +28,38 @@ that rule:
 * The shear is deliberately small (`0.03`). It is a garnish; the frosted
   translucency is the headline effect.
 
+## Assets
+
+`Graphics/Glass` holds the theme's UI textures. They are **generated**, not
+hand-drawn or AI-generated, by:
+
+```
+python3 Other/gen_glass_assets.py
+```
+
+| File | Purpose |
+| --- | --- |
+| `Corner.png` | One rounded corner, drawn four times per panel at 0/90/180/270 degrees |
+| `Corner (doubleres).png` | High-DPI variant; OutFox picks it automatically, keep both |
+| `Shadow.png` | Pre-blurred ambient shadow for elevation |
+| `Sheen.png` | Diagonal specular streak, the cue that reads as glass |
+| `GradePlate.png` | Rounded, sheared backing plate for a grade badge |
+| `Ring.png` | Thin rounded outline for focus rings and avatar frames |
+
+Three rules for these files:
+
+1. **Every file is pure white plus alpha and carries no colour.** The theme
+   tints each sprite at runtime from `ModernUI.Tokens`, so one set serves every
+   palette and accent. Recolouring them by hand breaks palette switching.
+2. **The folder is optional.** `ModernUI.HasGlassArt` is probed at load time; if
+   the art is missing, `ModernUI.Radius()` returns 0 and every panel falls back
+   to square-cornered quads. The theme still runs on a fresh checkout.
+3. **They are geometry, so regenerate rather than retouch.** The corner radius
+   and alpha edges are mathematically exact because they are drawn from
+   equations and supersampled 4x. Edit the constants in the script and rerun it.
+
+The PNGs themselves are not committed — run the script to produce them.
+
 ## Design reference
 
 The visual reference is **Pump It Up Phoenix 2**, released in July 2026 as the
@@ -84,9 +116,19 @@ installment with its own identity.
 | Palette | Single violet-leaning set of tokens | Swappable palettes; the default **phoenix** palette is near-black navy with pure white type, `infinity` keeps the violet set |
 | Accent | `cyan` default | **phoenix2** (electric green) is the default; `phoenix` keeps the near-white cyan of the 2023 generation |
 | Glass body | Gradient edges hard-coded as raw violet numbers, ignoring the palette | Edges derived from `Tokens.SurfaceHi` and `Tokens.Base` via `ModernUI.Tint()`, plus a dedicated `Glass` token |
-| Geometry | Upright panels only | Subtle shared **diagonal shear** (`Config.Skew = 0.03`) on hairlines, glass cards and chrome bars |
+| Geometry | Upright panels only | Subtle shared **diagonal shear** (`Config.Skew = 0.03`) |
 | Chart levels | Infinity difficulty colours | `ModernUI.LevelColor()` — Phoenix-style colour per level tier |
 | Grades | Engine grade scale | `ModernUI.GradeTier()` — SSS+ → F scale with `GradeColor()` |
+
+### Phase 5 — real glass geometry
+
+| Area | Before | Now |
+| --- | --- | --- |
+| Corners | Square, because quads cannot be rounded | **Nine-slice** panels: quad edges plus four rotated copies of one rounded-corner sprite |
+| Shadow | Hard-edged offset quad | Pre-blurred `Shadow.png` sprite, much softer falloff |
+| Sheen | None | Optional additive `Sheen.png` streak across each panel |
+| Shear | Applied per piece | Applied to the card's own `ActorFrame`, keeping the nine slices aligned |
+| Focus rings | None | `ModernUI.FocusRing()` |
 
 ## Configuration
 
@@ -104,6 +146,8 @@ ModernUI.Config = {
     Scanlines  = false,
     GlowBlobs  = 5,
     Skew       = 0.03,        -- 0 = upright panels, clamped to +/-0.25
+    Radius     = 14,          -- corner radius in px; needs Graphics/Glass
+    Sheen      = true,        -- diagonal specular streak on glass panels
 }
 ```
 
@@ -152,10 +196,11 @@ colours apply as soon as you leave the options screen.
 
 ### Known gaps
 
-* `Palette`, `Skew`, `Grain`, `Vignette`, `Scanlines` and `GlowBlobs` are read
-  from `OutFoxPrefs.ini` but have **no option row yet**, so they can only be
-  changed by editing `Scripts/06 ModernUI.lua` or the prefs file. Adding a row
-  also means adding strings to all five language files.
+* `Palette`, `Skew`, `Radius`, `Sheen`, `Grain`, `Vignette`, `Scanlines` and
+  `GlowBlobs` are read from `OutFoxPrefs.ini` or the config table but have **no
+  option row yet**, so they can only be changed by editing
+  `Scripts/06 ModernUI.lua` or the prefs file. Adding a row also means adding
+  strings to all five language files.
 * The per-choice labels (`Aurora` / `Video` / `Classic`, `Phoenix 2` /
   `Phoenix` / …) are still hard-coded English in
   `Scripts/07 ModernUI.Options.lua`; only the row titles and explanations are
@@ -163,14 +208,13 @@ colours apply as soon as you leave the options screen.
 
 ## Still to do
 
-Be realistic about what is done: this is a glassmorphism interface with a
-Phoenix 2 palette and geometry, not a Phoenix 2 reproduction.
+This is a glassmorphism interface with a Phoenix 2 palette and geometry, not a
+Phoenix 2 reproduction.
 
-**Needs code only (doable next):**
+**Needs code only:**
 
-* `ModernUI.LevelColor()` and `ModernUI.GradeTier()` exist but are **not wired
-  into any screen yet**. The chart list and the evaluation screen still use the
-  Infinity difficulty colours and the engine grade scale.
+* `ModernUI.LevelColor()` is **not wired into the chart list yet**, which still
+  uses the Infinity difficulty colours.
 * The grade thresholds in `GradeTiers` are approximations of the official
   cutoffs. They live in one table and are meant to be tuned.
 * Horizontal Phoenix-style song select (banner strip along the bottom, vertical
@@ -179,36 +223,32 @@ Phoenix 2 palette and geometry, not a Phoenix 2 reproduction.
   metrics and the chart list. Weigh it against the identity rule above — it is
   a Phoenix layout, not a glassmorphism requirement.
 
-**Needs new art or fonts (cannot be done in Lua):**
+**Still blocked on art or engine features:**
 
-* **Rounded corners.** OutFox quads cannot be rounded; this needs a 9-slice
-  texture set. This is the single biggest visual gap for glassmorphism, which
-  normally leans on soft rounded panes.
-* **A real blur.** True frosted glass blurs what is behind it; without a
-  render-to-texture pass the theme approximates it with translucency, gradients
-  and grain.
+* **A real blur.** True frosted glass blurs what is behind it. Without a
+  render-to-texture pass the theme approximates it with translucency,
+  gradients, the sheen and grain. This is now the biggest remaining gap.
 * **The italic condensed display font** Phoenix uses. The theme currently ships
   Montserrat and VCR OSD Mono.
-* **Noteskins, grade plates and judgement art** in the Phoenix style.
-
-## Performance notes
-
-* No new image or video assets: the modern layer reuses
-  `Graphics/Background/circle.png`, `Graphics/Noise.png`,
-  `Graphics/Scanline.png` and `Graphics/Grid`.
-* Glow blobs animate with engine-side `bob()` / `pulse()` effects instead of
-  Lua `Update` callbacks, so there is no per-frame Lua cost.
-* Dropping the MP4 background (`Style = "aurora"`) removes an H.264 decode
-  from every menu screen.
-* Recommended for weak hardware: `Motion = "reduced"`, `GlowBlobs = 2`,
-  `Grain = false`.
+* **Noteskins and judgement art** in the Phoenix style.
 
 ## Implementation notes / gotchas
 
+* **The evaluation screen keeps its own grades on purpose.** Those are official
+  PIU sprites from `Graphics/LetterGrades`, selected by
+  `Modules/PIU/Score.GradingEval.lua`. Replacing them with `GradeTier()` text
+  would throw away authentic art. Use `GradeTier()` only where a grade is
+  rendered as *text*, such as personal bests in the song wheel.
 * **Never hard-code colour numbers in gradients.** `diffusetopedge` and friends
   take a colour, and raw numbers there silently ignore the active palette — the
   glass body carried a violet cast for exactly this reason. Use
   `ModernUI.Tint(token, alpha)` to rebuild a palette token at a given alpha.
+* **Shear the frame, not the slices.** A nine-slice panel must be sheared via
+  its own `ActorFrame`. Skewing each piece separately shifts them by different
+  amounts and tears the corners away from the edges.
+* **A full-bleed bar must not be rounded.** `ModernUI.ChromeBar` passes
+  `radius = 0`, because its left and right edges deliberately run off-screen and
+  rounding them would put a visible notch at the screen edge.
 * **`GetChild("")` in the music wheel.** The scroll handler resolves the
   index label through the *last unnamed child* of the wheel item. Every
   actor the modern layer adds there is explicitly **named** (`Halo`,
@@ -234,19 +274,28 @@ Phoenix 2 palette and geometry, not a Phoenix 2 reproduction.
   table: other files already hold a reference to it and would keep rendering
   the old palette. `Scripts/07` calls `ApplyPalette()` again after reading the
   saved preferences.
-* **A sheared bar needs bleed.** `skewx` pulls the top and bottom edges
-  sideways, which would expose a wedge of background at the screen edges.
-  `ModernUI.ChromeBar` widens itself by that offset automatically; do the same
-  if you shear a full-width panel yourself.
-* **Square corners are intentional** — for now. OutFox quads cannot be rounded
-  without extra textures, so depth comes from the gradient, hairlines, the
-  shear and shadow quads.
+* **`Ring.png` is square.** Stretching it to a strongly non-square size
+  distorts the corner radius. Use `FocusRing` where width and height are close.
 * **Contrast.** Wherever the original art was a light plate with
   `Color.Black` text, modern mode dims the plate *and* switches the type to
   `ModernUI.Tokens.Text`; never change one without the other.
 * **Text attribute lengths.** `AddAttribute` counts characters including the
   newline, so derive the length from the string (`#ThemeName`) instead of
   hard-coding it, or the tint bleeds onto the next line.
+
+## Performance notes
+
+* The generated textures are tiny (all six under 15 KB) and every panel reuses
+  the same handful, so they cost one texture bind rather than new memory per
+  screen.
+* A nine-slice panel is 9 actors instead of 2. That is still trivial next to the
+  background, but do not build them inside a per-frame `Update`.
+* Glow blobs animate with engine-side `bob()` / `pulse()` effects instead of
+  Lua `Update` callbacks, so there is no per-frame Lua cost.
+* Dropping the MP4 background (`Style = "aurora"`) removes an H.264 decode
+  from every menu screen.
+* Recommended for weak hardware: `Motion = "reduced"`, `GlowBlobs = 2`,
+  `Grain = false`, `Sheen = false`.
 
 ## API for further work
 
@@ -257,16 +306,19 @@ ModernUI.Tokens.Text / .TextDim / ...  -- colour tokens
 ModernUI.Tint(token, 0.4)              -- palette token at a given alpha
 ModernUI.ApplyPalette("phoenix")       -- swap palette at runtime
 ModernUI.IsModern() / .UseGlass()      -- feature gates
+ModernUI.HasGlassArt                   -- is Graphics/Glass installed?
 ModernUI.MotionScale()                 -- 0 | 0.55 | 1
 ModernUI.T(0.5)                        -- duration scaled by motion setting
 ModernUI.Skew()                        -- shared horizontal shear
+ModernUI.Radius(w, h)                  -- clamped corner radius, 0 without art
 ModernUI.EaseIn(actor, 0.5)            -- signature easing
 ModernUI.LevelColor(21)                -- Phoenix colour for a chart level
 ModernUI.GradeTier(0.9912)             -- "SSS", accepts 0-1 or 0-100
 ModernUI.GradeColor("SSS")             -- colour for a grade name
 ModernUI.Hairline{ w = 200, y = 0 }    -- 1px separator
 ModernUI.SoftGlow{ zoom = 3, ... }     -- additive radial glow
-ModernUI.GlassCard{ w = 420, h = 160 } -- frosted panel
+ModernUI.FocusRing{ w = 96, h = 96 }   -- rounded outline
+ModernUI.GlassCard{ w = 420, h = 160 } -- frosted rounded panel
 ModernUI.ChromeBar{ h = 92 }           -- full-width frosted bar
 LoadModule("UI.GlassCard.lua"){ ... }  -- same card from any screen
 ```
