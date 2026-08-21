@@ -8,14 +8,14 @@
 -- outright: there is nothing to hide, because the pill actor is never
 -- constructed.
 --
+-- Whether the engine asks for "scroll" or "choice" varies between
+-- builds, so this is a byte-identical twin of
+-- "ScreenTitleMenu scroll.lua". Only one path is ever queried; the other
+-- file is simply never read, which costs nothing.
+--
 -- Placement, scale, fade and the slide-to-centre motion all come from
 -- ScrollerTransform in metrics.ini. This file is only responsible for
 -- what a single card looks like, which keeps the two concerns apart.
---
--- Modern mode draws a glass card with an accent bar and a gradient
--- label. Classic mode draws a plain dark plate, which approximates the
--- old pill; it cannot delegate back to the fallback art, since asking
--- the engine for this path again would just resolve to this same file.
 -- =====================================================================
 
 local Modern = ModernUI and ModernUI.IsModern()
