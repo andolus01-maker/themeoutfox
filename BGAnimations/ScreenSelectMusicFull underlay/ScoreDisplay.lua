@@ -2,13 +2,23 @@ local Scoring = LoadModule("Config.Load.lua")("ScoringSystem", "Save/OutFoxPrefs
 local ClassicGrades = LoadModule("Config.Load.lua")("ClassicGrades", "Save/OutFoxPrefs.ini") and Scoring == "Old"
 local SongIsChosen = false
 
--- Modern UI: accent glow behind the score plate plus accent-tinted
--- personal-best figures. The plate art itself is left untouched so the
--- layout stays pixel-identical.
+-- Modern UI: accent glow behind the score plate plus grade-tinted personal and
+-- machine best figures. The grade sprite itself is left alone -- it is official
+-- PIU art from Graphics/LetterGrades and the theme should keep using it. What
+-- the modern layer adds is colour on the *numbers*, driven by the very same
+-- grade code the sprite is loaded from, so the two can never disagree.
 local Modern = ModernUI and ModernUI.IsModern()
 local function Dur(seconds)
     if ModernUI then return ModernUI.T(seconds) end
     return seconds
+end
+
+-- Tint a score readout by grade, or reset it to the accent when there is no
+-- score to grade.
+local function TintByGrade(text, grade)
+    if not Modern then return end
+    text:diffuse(Color.White)
+    text:diffusetopedge(grade and ModernUI.GradeColor(grade) or ModernUI.Accent(1))
 end
 
 local t = Def.ActorFrame {}
@@ -44,17 +54,21 @@ for pn in ivalues(GAMESTATE:GetHumanPlayers()) do
                     if ProfileScores[1] ~= nil then
                         local ProfileScore = ProfileScores[1]:GetScore()
                         local ProfileDP = round(ProfileScores[1]:GetPercentDP() * 100, 2) .. "%"
+                        local ProfileGrade = LoadModule("PIU/Score.Grading.lua")(ProfileScores[1])
 
                         self:GetChild("PersonalGrade"):Load(THEME:GetPathG("", "LetterGrades/" .. (ClassicGrades and "" or "New/") ..
-                            LoadModule("PIU/Score.Grading.lua")(ProfileScores[1]))):visible(true)
+                            ProfileGrade)):visible(true)
                         self:GetChild("PersonalScore"):settext(ProfileDP .. "\n" .. ProfileScore)
+                        TintByGrade(self:GetChild("PersonalScore"), ProfileGrade)
                     else
                         self:GetChild("PersonalGrade"):visible(false)
                         self:GetChild("PersonalScore"):settext("")
+                        TintByGrade(self:GetChild("PersonalScore"), nil)
                     end
                 else
                     self:GetChild("PersonalGrade"):visible(false)
                     self:GetChild("PersonalScore"):settext("")
+                    TintByGrade(self:GetChild("PersonalScore"), nil)
                 end
 
                 -- Machine best score
@@ -63,13 +77,16 @@ for pn in ivalues(GAMESTATE:GetHumanPlayers()) do
                     local MachineScore = MachineHighScores[1]:GetScore()
                     local MachineDP = round(MachineHighScores[1]:GetPercentDP() * 100, 2) .. "%"
                     local MachineName = MachineHighScores[1]:GetName()
+                    local MachineGrade = LoadModule("PIU/Score.Grading.lua")(MachineHighScores[1])
 
                     self:GetChild("MachineGrade"):Load(THEME:GetPathG("", "LetterGrades/" .. (ClassicGrades and "" or "New/") ..
-                            LoadModule("PIU/Score.Grading.lua")(MachineHighScores[1]))):visible(true)
+                            MachineGrade)):visible(true)
                     self:GetChild("MachineScore"):settext(MachineName .. "\n" .. MachineDP .. "\n" .. MachineScore)
+                    TintByGrade(self:GetChild("MachineScore"), MachineGrade)
                 else
                     self:GetChild("MachineGrade"):visible(false)
                     self:GetChild("MachineScore"):settext("")
+                    TintByGrade(self:GetChild("MachineScore"), nil)
                 end
             end,
 
@@ -117,6 +134,7 @@ for pn in ivalues(GAMESTATE:GetHumanPlayers()) do
                 InitCommand=function(self)
                     self:xy(90 + CorrectionX, 60):zoom(1):halign(1)
                     :diffuse(Color.White):vertspacing(-6):shadowlength(1)
+                    if Modern then self:diffusetopedge(ModernUI.Accent(1)) end
                 end,
             },
         }

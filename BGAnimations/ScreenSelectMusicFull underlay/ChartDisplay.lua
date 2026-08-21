@@ -16,6 +16,14 @@ local PreviewDelay = THEME:GetMetric("ScreenSelectMusic", "SampleMusicDelay")
 local CenterList = LoadModule("Config.Load.lua")("CenterChartList", "Save/OutFoxPrefs.ini")
 local CanWrap = LoadModule("Config.Load.lua")("WrapChartScroll", "Save/OutFoxPrefs.ini")
 
+-- Modern UI: Phoenix-style level colours on the difficulty numbers.
+--
+-- Nothing is added to this frame tree on purpose. RefreshCommand reaches the
+-- chart slots through GetChild("")[i] and the scroll arrows through
+-- GetChild("")[ItemAmount+1], so inserting even one top-level actor would
+-- shift every index and break the entire list.
+local Modern = ModernUI and ModernUI.IsModern()
+
 -- http://lua-users.org/wiki/CopyTable
 function ShallowCopy(orig)
     local orig_type = type(orig)
@@ -255,9 +263,21 @@ local t = Def.ActorFrame {
                     if ChartMeter == 99 then ChartMeter = "??" end
                     local ChartDescription = Chart:GetDescription()
 
+                    local LevelText = self:GetChild("")[i]:GetChild("Level")
+
                     self:GetChild("")[i]:GetChild("Icon"):visible(true):diffuse(ChartTypeToColor(Chart))
                     self:GetChild("")[i]:GetChild("IconTrim"):visible(true)
-                    self:GetChild("")[i]:GetChild("Level"):visible(true):settext(ChartMeter)
+                    LevelText:visible(true):settext(ChartMeter)
+
+                    -- Phoenix-style level tiers. ChartMeter is "??" for the
+                    -- level-99 co-op charts, which has no tier, so those stay
+                    -- on the plain text colour.
+                    if Modern then
+                        LevelText:diffuse(tonumber(ChartMeter)
+                            and ModernUI.LevelColor(ChartMeter)
+                            or ModernUI.Tokens.Text)
+                    end
+
                     self:GetChild("")[i]:GetChild("HighlightP1"):visible(
                         (ChartIndex[PLAYER_1] == i + ListOffset) and SongIsChosen and GAMESTATE:IsHumanPlayer(PLAYER_1))
                     self:GetChild("")[i]:GetChild("HighlightP2"):visible(
@@ -328,6 +348,8 @@ for i=1,ItemAmount do
             Name="Level",
             InitCommand=function(self)
                 self:xy(FrameX + ItemW * (i - 1), 0):zoom(0.6):maxwidth(75)
+                -- A tinted number on a tinted ball needs a little separation.
+                if Modern then self:shadowlength(1) end
             end
         },
 

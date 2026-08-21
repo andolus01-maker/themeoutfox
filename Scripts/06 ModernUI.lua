@@ -249,21 +249,52 @@ function ModernUI.LevelColor(level)
     return color("#7A28FF")
 end
 
+-- The theme's own grade codes, as produced by Modules/PIU/Score.Grading.lua
+-- and Score.GradingEval.lua: a "Pass"/"Fail" prefix followed by a code where
+-- a leading digit is a repeat count and "P" means "plus". So 3PS is SSS+ and
+-- 2A is AA. Mapping them here means grade colours can be driven by the grade
+-- the theme actually computed, instead of re-deriving one from a percentage.
+local GradeNames = {
+    ["3PS"] = "SSS+", ["3S"] = "SSS",
+    ["2PS"] = "SS+",  ["2S"] = "SS",
+    ["PS"]  = "S+",   ["S"]  = "S",
+    ["3PA"] = "AAA+", ["3A"] = "AAA",
+    ["2PA"] = "AA+",  ["2A"] = "AA",
+    ["PA"]  = "A+",   ["A"]  = "A",
+    ["B"]   = "B",    ["C"]  = "C",
+    ["D"]   = "D",    ["F"]  = "F",
+}
+
+-- Translate a theme grade code into its display name.
+-- Returns the name plus whether the run was a fail, because in PIU a failed
+-- run is a fail no matter how good the letter looks.
+function ModernUI.GradeName(grade)
+    grade = tostring(grade or "F")
+    local failed = grade:sub(1, 4) == "Fail"
+    local code = grade:gsub("^Pass", ""):gsub("^Fail", "")
+    return GradeNames[code] or code, failed
+end
+
 -- Minimum percentage -> grade name, highest first.
--- These are approximations of the official Phoenix cutoffs; adjust freely.
+-- These mirror the score cutoffs in Modules/PIU/Score.Grading.lua (which works
+-- in points out of 1000000) divided by 10000. Keep the two in sync: if they
+-- drift, the same play gets one grade on the score plate and a different one
+-- anywhere GradeTier is used.
 local GradeTiers = {
     { 99.5, "SSS+" }, { 99,   "SSS" },
     { 98.5, "SS+"  }, { 98,   "SS"  },
     { 97.5, "S+"   }, { 97,   "S"   },
     { 96,   "AAA+" }, { 95,   "AAA" },
     { 92.5, "AA+"  }, { 90,   "AA"  },
-    { 87.5, "A+"   }, { 85,   "A"   },
-    { 80,   "B"    }, { 70,   "C"   },
-    { 60,   "D"    },
+    { 82.5, "A+"   }, { 75,   "A"   },
+    { 65,   "B"    }, { 55,   "C"   },
+    { 45,   "D"    },
 }
 
 -- Accepts either a 0-1 ratio (what the engine usually hands out) or an
 -- already-scaled 0-100 percentage.
+-- Prefer GradeName() when the theme has already computed a grade: this is a
+-- derivation, that is the real thing.
 function ModernUI.GradeTier(percent)
     percent = tonumber(percent) or 0
     if percent > 0 and percent <= 1 then percent = percent * 100 end
@@ -274,13 +305,16 @@ function ModernUI.GradeTier(percent)
     return "F"
 end
 
+-- Colour for a grade. Accepts either a theme grade code ("Pass3PS") or a
+-- display name ("SSS+").
 function ModernUI.GradeColor(grade)
-    grade = tostring(grade or "F")
-    local head = grade:sub(1, 1)
+    local name, failed = ModernUI.GradeName(grade)
+    if failed then return ModernUI.Tokens.Bad end
 
+    local head = name:sub(1, 1)
     if head == "S" then return ModernUI.Accent(1) end
     if head == "A" then return ModernUI.Tokens.Good end
-    if grade == "F" then return ModernUI.Tokens.Bad end
+    if name == "F" then return ModernUI.Tokens.Bad end
     return ModernUI.Tokens.Warn
 end
 
