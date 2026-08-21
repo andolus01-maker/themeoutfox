@@ -24,7 +24,7 @@ end
 ModernUI.Choices = {
     Style   = { "aurora", "video", "classic" },
     Palette = { "phoenix", "infinity" },
-    Accent  = { "phoenix", "cyan", "violet", "magenta", "lime", "amber", "ice" },
+    Accent  = { "phoenix2", "phoenix", "cyan", "violet", "magenta", "lime", "amber", "ice" },
     Motion  = { "full", "reduced", "off" },
 }
 
@@ -127,7 +127,7 @@ end
 
 function ModernUI.OptionRow.Accent()
     return BuildRow("ModernAccent", ModernUI.Choices.Accent,
-        { "Phoenix", "Cyan", "Violet", "Magenta", "Lime", "Amber", "Ice" })
+        { "Phoenix 2", "Phoenix", "Cyan", "Violet", "Magenta", "Lime", "Amber", "Ice" })
 end
 
 function ModernUI.OptionRow.Motion()

@@ -17,7 +17,7 @@
 --   "classic" - fall back to the original Infinity chrome and background
 --
 -- Palette: phoenix | infinity
--- Accent:  phoenix | cyan | violet | magenta | lime | amber | ice
+-- Accent:  phoenix2 | phoenix | cyan | violet | magenta | lime | amber | ice
 -- Motion:  full | reduced | off        (reduced/off help low-end hardware)
 -- =====================================================================
 
@@ -26,7 +26,7 @@ ModernUI = {}
 ModernUI.Config = {
     Style      = "aurora",
     Palette    = "phoenix",
-    Accent     = "phoenix",
+    Accent     = "phoenix2",
     Motion     = "full",
     Glass      = true,
     Grain      = true,
@@ -43,14 +43,16 @@ ModernUI.Config = {
 -- ---------------------------------------------------------------------
 
 local AccentRamps = {
-    -- Phoenix leans on a near-white cyan against deep navy.
-    phoenix = { "#E9FBFF", "#2BA8FF" },
-    cyan    = { "#39E6FF", "#3D7BFF" },
-    violet  = { "#A177FF", "#5A2BE0" },
-    magenta = { "#FF5FD2", "#7A28FF" },
-    lime    = { "#8BFF5A", "#12C9A0" },
-    amber   = { "#FFC24A", "#FF5F6D" },
-    ice     = { "#DCEBFF", "#6E8CFF" },
+    -- Phoenix 2 (2026) is built around an electric green identity.
+    phoenix2 = { "#8CFF1F", "#12C98A" },
+    -- The original Phoenix generation (2023) leaned on near-white cyan.
+    phoenix  = { "#E9FBFF", "#2BA8FF" },
+    cyan     = { "#39E6FF", "#3D7BFF" },
+    violet   = { "#A177FF", "#5A2BE0" },
+    magenta  = { "#FF5FD2", "#7A28FF" },
+    lime     = { "#8BFF5A", "#12C9A0" },
+    amber    = { "#FFC24A", "#FF5F6D" },
+    ice      = { "#DCEBFF", "#6E8CFF" },
 }
 
 local Palettes = {
@@ -64,7 +66,8 @@ local Palettes = {
         TextDim   = "#9AA1CC",
         Hairline  = "1,1,1,0.16",
     },
-    -- Phoenix 2: almost black navy, cooler surfaces, pure white type.
+    -- Phoenix: almost black navy, cooler surfaces, pure white type. Shared by
+    -- both Phoenix generations; only the accent hue changes between them.
     phoenix = {
         Base      = "#05070E",
         BaseAlt   = "#0A1224",
@@ -107,7 +110,7 @@ end
 
 -- Accent ramp, 1 = bright end, 2 = deep end
 function ModernUI.Accent(index)
-    local ramp = AccentRamps[ModernUI.Config.Accent] or AccentRamps.phoenix
+    local ramp = AccentRamps[ModernUI.Config.Accent] or AccentRamps.phoenix2
     return color(ramp[index or 1])
 end
 
