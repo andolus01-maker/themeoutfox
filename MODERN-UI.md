@@ -117,8 +117,6 @@ installment with its own identity.
 | Accent | `cyan` default | **phoenix2** (electric green) is the default; `phoenix` keeps the near-white cyan of the 2023 generation |
 | Glass body | Gradient edges hard-coded as raw violet numbers, ignoring the palette | Edges derived from `Tokens.SurfaceHi` and `Tokens.Base` via `ModernUI.Tint()`, plus a dedicated `Glass` token |
 | Geometry | Upright panels only | Subtle shared **diagonal shear** (`Config.Skew = 0.03`) |
-| Chart levels | Infinity difficulty colours | `ModernUI.LevelColor()` — Phoenix-style colour per level tier |
-| Grades | Engine grade scale | `ModernUI.GradeTier()` — SSS+ → F scale with `GradeColor()` |
 
 ### Phase 5 — real glass geometry
 
@@ -129,6 +127,43 @@ installment with its own identity.
 | Sheen | None | Optional additive `Sheen.png` streak across each panel |
 | Shear | Applied per piece | Applied to the card's own `ActorFrame`, keeping the nine slices aligned |
 | Focus rings | None | `ModernUI.FocusRing()` |
+
+### Phase 6 — levels and grades wired up
+
+| Area | Before | Now |
+| --- | --- | --- |
+| Chart list levels | Infinity difficulty colours on the ball, plain white numbers | Difficulty numbers tinted by `LevelColor()`, with a shadow so a tinted number stays readable on a tinted ball |
+| Grade thresholds | `GradeTier()` invented its own cutoffs, six of which contradicted the theme's real scoring | Thresholds mirror `Modules/PIU/Score.Grading.lua` exactly |
+| Grade names | No link to the theme's own grade codes | `GradeName()` translates `Pass3PS` → `SSS+`, so colour follows the *real* grade |
+| Failed runs | A failed run with a good letter still coloured as a good grade | Any `Fail*` grade reads as a fail, which is how PIU treats it |
+| Score plate | Personal best always accent-tinted | Personal and machine bests tinted by their actual grade |
+
+#### The grade scale, and why it was wrong
+
+This theme already had a grade scale before the modern layer existed:
+`Modules/PIU/Score.Grading.lua` works in **points out of 1,000,000** and
+returns codes such as `Pass3PS` or `Fail2A`, where a leading digit is a repeat
+count and `P` means "plus" — so `3PS` is `SSS+` and `2A` is `AA`.
+
+`ModernUI.GradeTier()` was written independently, in percentages, and the two
+disagreed below `AA`:
+
+| Grade | Score module | Old `GradeTier` |
+| --- | --- | --- |
+| A+ (`PA`) | 82.5% | 87.5% |
+| A | 75% | 85% |
+| B | 65% | 80% |
+| C | 55% | 70% |
+| D | 45% | 60% |
+
+A play worth 800,000 points is an `A+` to the scoring module but was a plain
+`B` to `GradeTier`. The thresholds are now derived from that table (its score
+cutoffs divided by 10,000) and **must be kept in sync with it**. If you retune
+one, retune the other.
+
+Prefer `GradeName()` over `GradeTier()` whenever the theme has already computed
+a grade: `GradeName` translates the real result, while `GradeTier` re-derives a
+guess from a percentage.
 
 ## Configuration
 
@@ -213,15 +248,14 @@ Phoenix 2 reproduction.
 
 **Needs code only:**
 
-* `ModernUI.LevelColor()` is **not wired into the chart list yet**, which still
-  uses the Infinity difficulty colours.
-* The grade thresholds in `GradeTiers` are approximations of the official
-  cutoffs. They live in one table and are meant to be tuned.
 * Horizontal Phoenix-style song select (banner strip along the bottom, vertical
   difficulty chips) instead of the current vertical Infinity wheel. This is the
   largest and riskiest remaining change: it touches the music wheel, its
   metrics and the chart list. Weigh it against the identity rule above — it is
   a Phoenix layout, not a glassmorphism requirement.
+* A Pumbility-style player rating. The scale exists in `GradeTier`, but nothing
+  aggregates a profile's best charts yet.
+* `GradePlate.png` ships but no screen consumes it yet.
 
 **Still blocked on art or engine features:**
 
@@ -234,11 +268,26 @@ Phoenix 2 reproduction.
 
 ## Implementation notes / gotchas
 
+* **Two grade scales must not drift.** `GradeTiers` in `Scripts/06` mirrors the
+  score cutoffs in `Modules/PIU/Score.Grading.lua`. They are separate tables in
+  separate files, so changing one silently contradicts the other.
+* **The chart list is addressed by index, not by name.**
+  `ChartDisplay.lua` reaches its slots through `GetChild("")[i]` and the scroll
+  arrows through `GetChild("")[ItemAmount+1]`. Adding **any** top-level actor to
+  that file shifts every index and breaks the whole difficulty row. Modify the
+  existing slots instead.
 * **The evaluation screen keeps its own grades on purpose.** Those are official
   PIU sprites from `Graphics/LetterGrades`, selected by
   `Modules/PIU/Score.GradingEval.lua`. Replacing them with `GradeTier()` text
-  would throw away authentic art. Use `GradeTier()` only where a grade is
-  rendered as *text*, such as personal bests in the song wheel.
+  would throw away authentic art. The same applies to the grade sprite on the
+  song-select score plate: the modern layer tints the *numbers* next to it and
+  leaves the sprite alone.
+* **`diffuse()` resets the edge colours.** When tinting a gradient readout, call
+  `diffuse()` first and `diffusetopedge()` after, never the other way round.
+* **Level 99 is not a level.** Co-op charts report a meter of 99, which the
+  chart list displays as `??`. Anything colouring a level must handle a
+  non-numeric value — `LevelColor` coerces with `tonumber`, and the chart list
+  falls back to the plain text token.
 * **Never hard-code colour numbers in gradients.** `diffusetopedge` and friends
   take a colour, and raw numbers there silently ignore the active palette — the
   glass body carried a violet cast for exactly this reason. Use
@@ -313,8 +362,9 @@ ModernUI.Skew()                        -- shared horizontal shear
 ModernUI.Radius(w, h)                  -- clamped corner radius, 0 without art
 ModernUI.EaseIn(actor, 0.5)            -- signature easing
 ModernUI.LevelColor(21)                -- Phoenix colour for a chart level
-ModernUI.GradeTier(0.9912)             -- "SSS", accepts 0-1 or 0-100
-ModernUI.GradeColor("SSS")             -- colour for a grade name
+ModernUI.GradeName("Pass3PS")          -- "SSS+", plus a failed flag
+ModernUI.GradeTier(0.9912)             -- "SSS" derived from a percentage
+ModernUI.GradeColor("Pass3PS")         -- colour for a grade code or name
 ModernUI.Hairline{ w = 200, y = 0 }    -- 1px separator
 ModernUI.SoftGlow{ zoom = 3, ... }     -- additive radial glow
 ModernUI.FocusRing{ w = 96, h = 96 }   -- rounded outline
