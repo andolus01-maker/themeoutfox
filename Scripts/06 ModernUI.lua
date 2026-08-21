@@ -52,6 +52,10 @@ ModernUI.Config = {
     Radius     = 14,
     -- The diagonal specular streak across glass panels. Purely cosmetic.
     Sheen      = true,
+    -- The Pumbility-style rating chip on the song select screen. Computing it
+    -- walks the profile's high scores once per session, so it can be turned
+    -- off on very large song libraries.
+    Pumbility  = true,
 }
 
 -- ---------------------------------------------------------------------
@@ -70,6 +74,7 @@ ModernUI.HasGlassArt = HasGraphic("Glass/Corner")
 ModernUI.HasShadowArt = HasGraphic("Glass/Shadow")
 ModernUI.HasSheenArt = HasGraphic("Glass/Sheen")
 ModernUI.HasRingArt = HasGraphic("Glass/Ring")
+ModernUI.HasGradePlateArt = HasGraphic("Glass/GradePlate")
 
 -- ---------------------------------------------------------------------
 -- Tokens
@@ -555,6 +560,77 @@ function ModernUI.GlassCard(params)
     end
 
     return card
+end
+
+-- A small sheared chip for a rating or a grade, built on GradePlate.png.
+--
+-- The shear is baked into that texture, so this frame is deliberately NOT
+-- skewed: doing both would double the slant. When the art is missing it falls
+-- back to a plain glass card, which is upright, and that is fine.
+--
+-- params.name       - name for the returned frame, so callers can find it
+-- params.valueName  - name for the value text (default "Value")
+-- params.label      - small caption above the value
+-- params.font       - font for the value; "Montserrat numbers 40px" is digits
+--                     only, so use it only for numeric readouts
+function ModernUI.GradeBadge(params)
+    params = params or {}
+    local width = params.w or 160
+    local height = params.h or 60
+    local alpha = params.alpha or 0.8
+    local valueZoom = params.zoom or 0.8
+
+    local frame = Def.ActorFrame {
+        Name = params.name,
+        InitCommand = function(self)
+            self:xy(params.x or 0, params.y or 0)
+        end
+    }
+
+    if ModernUI.HasGradePlateArt then
+        frame[#frame + 1] = Def.Sprite {
+            Texture = THEME:GetPathG("", "Glass/GradePlate"),
+            InitCommand = function(self)
+                self:zoomto(width, height)
+                    :diffuse(Tint(ModernUI.Tokens.Glass or ModernUI.Tokens.Surface, alpha))
+            end
+        }
+    else
+        frame[#frame + 1] = ModernUI.GlassCard {
+            w = width, h = height,
+            alpha = alpha,
+            accentBar = false,
+            sheen = false,
+        }
+    end
+
+    if params.label then
+        frame[#frame + 1] = Def.BitmapText {
+            Font = "Common normal",
+            InitCommand = function(self)
+                self:y(-height * 0.26)
+                    :zoom(0.45)
+                    :maxwidth((width - 20) / 0.45)
+                    :settext(params.label)
+                    :diffuse(ModernUI.Tokens.TextDim)
+            end
+        }
+    end
+
+    frame[#frame + 1] = Def.BitmapText {
+        Name = params.valueName or "Value",
+        Font = params.font or "Common normal",
+        InitCommand = function(self)
+            self:y(params.label and height * 0.14 or 0)
+                :zoom(valueZoom)
+                :maxwidth((width - 20) / valueZoom)
+                :settext(params.text or "")
+                :diffuse(params.color or ModernUI.Accent(1))
+                :shadowlength(1)
+        end
+    }
+
+    return frame
 end
 
 -- Convenience wrapper so BGAnimations can build a full-width chrome bar.

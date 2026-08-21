@@ -1,4 +1,9 @@
 setenv("IsBasicMode", false)
+
+-- Modern UI: nothing in this file is addressed by index, so adding actors here
+-- is safe. (ChartDisplay.lua is the opposite -- see the note in that file.)
+local Modern = ModernUI and ModernUI.IsModern()
+
 local t = Def.ActorFrame {
 	-- Add timer functionality
 	InitCommand=function(self)
@@ -63,6 +68,60 @@ for pn in ivalues(GAMESTATE:GetHumanPlayers()) do
                 self:stoptweening():easeoutexpo(1):x(pn == PLAYER_2 and SCREEN_RIGHT + 40 * 2 or -40 * 2)
             end
         },
+
+        -- Pumbility-style rating chip.
+        --
+        -- The value is filled in *after* the screen has animated in: computing
+        -- it walks every song's high score list for this profile, which is not
+        -- instant on a large library, and doing that during the transition
+        -- would visibly stall it. The chip simply starts empty.
+        (Modern and ModernUI.Config.Pumbility) and Def.ActorFrame {
+            InitCommand=function(self)
+                self:xy(pn == PLAYER_2 and SCREEN_RIGHT + 200 or -200, 74)
+                :easeoutexpo(1):x(pn == PLAYER_2 and SCREEN_RIGHT - 104 or 104)
+                :queuecommand("Defer")
+            end,
+            OffCommand=function(self)
+                self:stoptweening():easeoutexpo(1)
+                :x(pn == PLAYER_2 and SCREEN_RIGHT + 200 or -200)
+            end,
+
+            DeferCommand=function(self)
+                self:sleep(0.6):queuecommand("Compute")
+            end,
+
+            ComputeCommand=function(self)
+                local badge = self:GetChild("PumbilityBadge")
+                local value = badge and badge:GetChild("Value")
+                if not value then return end
+
+                local data = LoadModule("UI.Pumbility.lua")(pn)
+
+                if data and data.rating and data.charts and data.charts > 0 then
+                    value:settext(tostring(data.rating))
+
+                    -- Below a full set of scored charts the figure is
+                    -- structurally low, so dim it rather than presenting a
+                    -- small number as if it were final.
+                    if data.charts < 50 then
+                        value:diffuse(ModernUI.Tokens.TextDim)
+                    end
+                else
+                    -- No profile, no scores, or the walk failed. Hide the chip
+                    -- instead of showing a placeholder: the value font is
+                    -- digits only and would render nothing useful anyway.
+                    self:visible(false)
+                end
+            end,
+
+            ModernUI.GradeBadge {
+                name = "PumbilityBadge",
+                w = 172, h = 64,
+                label = "PUMBILITY",
+                font = "Montserrat numbers 40px",
+                zoom = 0.7,
+            },
+        } or Def.Actor {},
 
         Def.ActorFrame {
             InitCommand=function(self)
