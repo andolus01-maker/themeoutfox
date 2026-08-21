@@ -28,6 +28,25 @@ that rule:
 * The shear is deliberately small (`0.03`). It is a garnish; the frosted
   translucency is the headline effect.
 
+## Screen coverage
+
+| Screen | State |
+| --- | --- |
+| Title / logo | Modern: accent halo, softer breathing, glass info chip |
+| Profile select | Modern: frosted selection plate, accent frame, token type |
+| Song select (full) | Modern: wheel halo, glass chart info, score plate, rating chip |
+| Evaluation | Modern: glass song info, accent score lines, grade tints |
+| Gameplay HUD | Modern: glass chrome bars, avatar cards |
+| Options / service | Modern: aurora backdrop, glass rows, accent cursor |
+| Song select (basic) | **Untouched** |
+| Select mode | **Untouched** (the underlay is a stub) |
+| Customize profile | **Untouched** |
+| Avatar image select | **Untouched** |
+| How to play, game over, stage info | **Untouched** |
+
+Untouched screens still render correctly — they inherit the modern background
+and fonts, they just have no bespoke glass treatment.
+
 ## Assets
 
 `Graphics/Glass` holds the theme's UI textures. They are **generated**, not
@@ -165,6 +184,22 @@ Prefer `GradeName()` over `GradeTier()` whenever the theme has already computed
 a grade: `GradeName` translates the real result, while `GradeTier` re-derives a
 guess from a percentage.
 
+#### The two grade art sets
+
+`Graphics/LetterGrades` looks incomplete at first glance and is not. There are
+two sets, and each matches what its scoring system can actually produce:
+
+* **`Graphics/LetterGrades/`** holds only `3S 2S S A B C D F` (pass and fail).
+  That is correct: the **old scoring** branch of `Score.Grading.lua` derives its
+  grade from raw accuracy and can never return a "plus" grade.
+* **`Graphics/LetterGrades/New/`** holds the full range, including `3PS` (SSS+),
+  `2PS` (SS+), `PS` (S+), `3PA` (AAA+), `2PA` (AA+) and `PA` (A+), plus the
+  `*Game` banners used for the overall run rating.
+
+So **SSS and SSS+ art already exists** and needs nothing. Do not "complete" the
+root folder by copying plus grades into it — nothing can ever request them
+there, and the extra files would just inflate the theme.
+
 ### Phase 7 — the Pumbility chip
 
 | Area | Before | Now |
@@ -193,6 +228,25 @@ Two behaviours worth knowing:
   hides itself. A decorative number must never take a screen down.
 
 Set `Config.Pumbility = false` to remove it entirely.
+
+### Phase 8 — profile select
+
+| Area | Before | Now |
+| --- | --- | --- |
+| Selection window | Three stacked hard-coded black quads | One frosted plate with an accent hairline along the bottom |
+| Card frame art | Plain white sprite | Tinted with the deep accent |
+| Card body | Opaque black | Dropped to 45% so the aurora shows through |
+| Type | Plain white | Palette tokens, secondary lines on `TextDim` |
+| Selection flash | White | Accent |
+| Transitions | Fixed durations | Scaled by the motion setting |
+
+This screen had no modern treatment at all, which made it the most visible
+remaining gap — it is the first interactive screen a player sees.
+
+All six frame names (`JoinFrame`, `BigFrame`, `SmallFrame`, `GuestText`,
+`Scroller`, `EffectFrame`) are load-bearing: `UpdateInternal3` resolves each one
+through `GetChild("Name")` to show and hide it. Renaming any of them breaks
+profile switching, memory-card handling and the guest fallback at once.
 
 ## Configuration
 
@@ -270,8 +324,12 @@ colours apply as soon as you leave the options screen.
   `Phoenix` / …) are still hard-coded English in
   `Scripts/07 ModernUI.Options.lua`; only the row titles and explanations are
   translated.
-* `PUMBILITY` on the rating chip is a hard-coded English caption, not a
-  translated string.
+* `PUMBILITY`, `Guest` and `No profile!` are hard-coded English captions rather
+  than translated strings.
+* The interface options screen is still internally called
+  `ScreenOptionsInfinitesimal`. It is only an identifier — players never see it
+  — but renaming it means touching `metrics.ini` and two redirect files
+  together, so it was left alone.
 
 ## Still to do
 
@@ -297,23 +355,31 @@ Phoenix 2 reproduction.
   Montserrat and VCR OSD Mono.
 * **Noteskins and judgement art** in the Phoenix style.
 
+**Lower-priority screens** listed as untouched in the coverage table above.
+
 ## Implementation notes / gotchas
 
 * **Two grade scales must not drift.** `GradeTiers` in `Scripts/06` mirrors the
   score cutoffs in `Modules/PIU/Score.Grading.lua`, and `GradeWeights` in
   `Modules/UI.Pumbility.lua` mirrors them again. They are three separate tables
   in three files, so changing one silently contradicts the others.
+* **The two grade art folders are deliberate, not incomplete.** See the section
+  above before adding files to `Graphics/LetterGrades`.
 * **The chart list is addressed by index, not by name.**
   `ChartDisplay.lua` reaches its slots through `GetChild("")[i]` and the scroll
   arrows through `GetChild("")[ItemAmount+1]`. Adding **any** top-level actor to
   that file shifts every index and breaks the whole difficulty row. Modify the
   existing slots instead. The song select `default.lua` is the opposite — it is
   addressed by name, so adding actors there is safe.
+* **Profile select is addressed by name, and those names are load-bearing.**
+  `UpdateInternal3` shows and hides six frames by name; renaming one breaks
+  profile switching silently.
 * **`GradePlate.png` already contains the shear.** Never skew a `GradeBadge`
   frame as well, or the slant doubles.
 * **`Montserrat numbers 40px` is digits only.** Do not put a placeholder like
   `--` or `...` in it; nothing will render. The rating chip starts blank and
-  hides itself on failure for exactly this reason.
+  hides itself on failure for exactly this reason. (`Montserrat semibold 40px`
+  and `Montserrat normal 20px` are full fonts and safe for arbitrary text.)
 * **Expensive work belongs after the transition.** The rating chip defers its
   computation with a `sleep` and a queued command so the screen finishes
   animating first. Anything that walks the song library should do the same.
