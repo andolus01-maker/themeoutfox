@@ -64,23 +64,22 @@ those values with what the player saved in `Save/OutFoxPrefs.ini`
 values silently fall back to the defaults above, so a hand-edited prefs file
 can never break the theme.
 
-### Wiring the option rows (optional)
+### Option rows (already wired)
 
-The rows are built and ready; they are not attached to a screen yet because
-that needs matching strings in **every** `Languages/*.ini` (a missing string
-shows up as a visible warning in OutFox). To enable them, add to
-`metrics.ini`:
+Style, Accent, Motion and Glass are live on the Interface options screen.
+`metrics.ini` declares them under `[ScreenInfOptionsUI]`:
 
 ```ini
 [ScreenInfOptionsUI]
+LineNames="ModernStyle,ModernAccent,ModernMotion,ModernGlass,1,2,3,4,5,6,7"
 LineModernStyle="lua,ModernUI.OptionRow.Style()"
 LineModernAccent="lua,ModernUI.OptionRow.Accent()"
 LineModernMotion="lua,ModernUI.OptionRow.Motion()"
 LineModernGlass="lua,ModernUI.OptionRow.Glass()"
 ```
 
-…append those line names to the existing `LineNames` list in that section,
-then add to each `Languages/*.ini`:
+The matching `[OptionTitles]` and `[OptionExplanations]` strings already ship
+in **all five** language files (`en`, `pl`, `pt-BR`, `zh-Hans`, `zh-Hant`):
 
 ```ini
 [OptionTitles]
@@ -96,8 +95,22 @@ ModernMotion=Reduce or disable animation for low-end hardware.
 ModernGlass=Frosted panels behind menus and HUD elements.
 ```
 
-Style and background changes apply after a theme reload; accent colours
-apply as soon as you leave the options screen.
+Do not add those keys again — they are present. If you add a **new** language
+file, copy the eight keys above across, otherwise OutFox shows a visible
+missing-string warning on the options screen.
+
+Style and background changes apply after a theme reload; accent colours apply
+as soon as you leave the options screen.
+
+### Known gaps
+
+* `Grain`, `Vignette`, `Scanlines` and `GlowBlobs` are read from
+  `OutFoxPrefs.ini` but have **no option row yet**, so they can only be
+  changed by editing `Scripts/06 ModernUI.lua` or the prefs file. Adding a
+  row also means adding strings to all five language files.
+* The per-choice labels (`Aurora` / `Video` / `Classic`, `Cyan` / `Violet` /
+  …) are still hard-coded English in `Scripts/07 ModernUI.Options.lua`; only
+  the row titles and explanations are translated.
 
 ## Performance notes
 
@@ -118,14 +131,31 @@ apply as soon as you leave the options screen.
   actor the modern layer adds there is explicitly **named** (`Halo`,
   `IndexBar`), otherwise the lookup retargets and the theme crashes.
 * **`Motion = "off"` and `effectperiod`.** Never feed `ModernUI.T()` into
-  `effectperiod`; it returns ~0 when motion is off, which stalls the engine
-  effect. The options list guards this by holding a static accent instead.
+  `effectperiod` unless the call is already guarded by
+  `ModernUI.MotionScale() > 0`; it returns ~0 when motion is off, which
+  stalls the engine effect. The options list guards this by holding a static
+  accent instead.
+* **`pulse()` overrides `zoom()`.** The pulse effect drives zoom directly,
+  so `ModernUI.SoftGlow` expresses its magnitude in *absolute* zoom
+  (`baseZoom` → `baseZoom * ratio`). Passing a bare `1` → `1.06` magnitude
+  silently throws away `params.zoom` and snaps every glow down to 1x.
+  `pulse = true` is accepted as "use the default ratio"; the value is run
+  through `tonumber()` so a boolean can never reach `effectmagnitude()`,
+  which only takes numbers.
+* **Colour tokens carry their own alpha.** `ModernUI.Tokens.Hairline` is
+  `color("1,1,1,0.16")`, and `diffusealpha()` *replaces* that alpha rather
+  than multiplying it. `ModernUI.Hairline` therefore defaults its alpha to
+  the token's own value; pass `alpha` explicitly only when you really want a
+  brighter line (the glass card top highlight does).
 * **Square corners are intentional.** OutFox quads cannot be rounded
   without extra textures, so depth comes from gradients, hairlines and
   shadow quads.
 * **Contrast.** Wherever the original art was a light plate with
   `Color.Black` text, modern mode dims the plate *and* switches the type to
   `ModernUI.Tokens.Text`; never change one without the other.
+* **Text attribute lengths.** `AddAttribute` counts characters including the
+  newline, so derive the length from the string (`#ThemeName`) instead of
+  hard-coding it, or the tint bleeds onto the next line.
 
 ## API for further work
 

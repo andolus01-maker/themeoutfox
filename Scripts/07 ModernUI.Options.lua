@@ -43,7 +43,8 @@ for _, key in ipairs({ "Style", "Accent", "Motion" }) do
     end
 end
 
--- Booleans are stored as the strings "true"/"false" by Config.Save.lua
+-- Booleans are stored as the strings "true"/"false" by Config.Save.lua.
+-- These four have no option row yet, so they are file-only settings for now.
 for _, key in ipairs({ "Glass", "Grain", "Vignette", "Scanlines" }) do
     local saved = Load("Modern" .. key)
     if saved ~= nil and saved ~= "" then
@@ -59,9 +60,17 @@ end
 -- ---------------------------------------------------------------------------
 -- Option row builders
 -- ---------------------------------------------------------------------------
--- Wire these into metrics.ini, e.g. under [ScreenInfOptionsUI]:
---     LineModernStyle="lua,ModernUI.OptionRow.Style()"
--- See MODERN-UI.md for the full snippet including the language strings.
+-- These rows are already wired up: metrics.ini declares LineModernStyle,
+-- LineModernAccent, LineModernMotion and LineModernGlass under
+-- [ScreenInfOptionsUI], and every Languages/*.ini carries the matching
+-- [OptionTitles] / [OptionExplanations] strings. Do not add those keys again.
+--
+-- Grain, Vignette, Scanlines and GlowBlobs are read above but have no row
+-- yet; adding one also means adding strings to all five language files.
+--
+-- Note: the choice labels below are still hard-coded English. Only the row
+-- titles and explanations go through the language files.
+-- See MODERN-UI.md.
 
 ModernUI.OptionRow = {}
 
