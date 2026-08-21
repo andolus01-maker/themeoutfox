@@ -37,14 +37,14 @@ hand-drawn or AI-generated, by:
 python3 Other/gen_glass_assets.py
 ```
 
-| File | Purpose |
-| --- | --- |
-| `Corner.png` | One rounded corner, drawn four times per panel at 0/90/180/270 degrees |
-| `Corner (doubleres).png` | High-DPI variant; OutFox picks it automatically, keep both |
-| `Shadow.png` | Pre-blurred ambient shadow for elevation |
-| `Sheen.png` | Diagonal specular streak, the cue that reads as glass |
-| `GradePlate.png` | Rounded, sheared backing plate for a grade badge |
-| `Ring.png` | Thin rounded outline for focus rings and avatar frames |
+| File | Purpose | Used by |
+| --- | --- | --- |
+| `Corner.png` | One rounded corner, drawn four times per panel at 0/90/180/270 degrees | `GlassCard` |
+| `Corner (doubleres).png` | High-DPI variant; OutFox picks it automatically, keep both | `GlassCard` |
+| `Shadow.png` | Pre-blurred ambient shadow for elevation | `GlassCard` |
+| `Sheen.png` | Diagonal specular streak, the cue that reads as glass | `GlassCard` |
+| `GradePlate.png` | Rounded, sheared backing plate | `GradeBadge` |
+| `Ring.png` | Thin rounded outline | `FocusRing` |
 
 Three rules for these files:
 
@@ -165,6 +165,35 @@ Prefer `GradeName()` over `GradeTier()` whenever the theme has already computed
 a grade: `GradeName` translates the real result, while `GradeTier` re-derives a
 guess from a percentage.
 
+### Phase 7 — the Pumbility chip
+
+| Area | Before | Now |
+| --- | --- | --- |
+| Player rating | None | Sheared rating chip on song select, one per joined player |
+| `GradePlate.png` | Shipped but unused | Backing plate for `ModernUI.GradeBadge()` |
+
+`Modules/UI.Pumbility.lua` rates every chart the profile has scored as
+`level x grade weight`, sorts them, and averages the best 50. **Andamiro does
+not publish the real formula**, so this is an explicit approximation; every
+constant lives in one block at the top of that file (`TopCount`, `PointScale`,
+`GradeWeights`).
+
+The average divides by `TopCount` rather than by the number of charts actually
+played, so a new profile starts low and grows — the same shape as the real
+system. Below 50 scored charts the chip dims itself so a small number does not
+read as a bug.
+
+Two behaviours worth knowing:
+
+* **It is computed once per session and cached**, keyed by player. Walking every
+  song's high score list is not free on a large library.
+* **It is computed after the screen animates in**, not during. The chip starts
+  empty, waits, then fills. Doing the walk inline would stall the transition.
+* If anything fails — no profile, no scores, or a missing engine call — the chip
+  hides itself. A decorative number must never take a screen down.
+
+Set `Config.Pumbility = false` to remove it entirely.
+
 ## Configuration
 
 Defaults live at the top of `Scripts/06 ModernUI.lua`:
@@ -183,6 +212,7 @@ ModernUI.Config = {
     Skew       = 0.03,        -- 0 = upright panels, clamped to +/-0.25
     Radius     = 14,          -- corner radius in px; needs Graphics/Glass
     Sheen      = true,        -- diagonal specular streak on glass panels
+    Pumbility  = true,        -- rating chip on song select
 }
 ```
 
@@ -231,31 +261,32 @@ colours apply as soon as you leave the options screen.
 
 ### Known gaps
 
-* `Palette`, `Skew`, `Radius`, `Sheen`, `Grain`, `Vignette`, `Scanlines` and
-  `GlowBlobs` are read from `OutFoxPrefs.ini` or the config table but have **no
-  option row yet**, so they can only be changed by editing
+* `Palette`, `Skew`, `Radius`, `Sheen`, `Pumbility`, `Grain`, `Vignette`,
+  `Scanlines` and `GlowBlobs` are read from `OutFoxPrefs.ini` or the config
+  table but have **no option row yet**, so they can only be changed by editing
   `Scripts/06 ModernUI.lua` or the prefs file. Adding a row also means adding
   strings to all five language files.
 * The per-choice labels (`Aurora` / `Video` / `Classic`, `Phoenix 2` /
   `Phoenix` / …) are still hard-coded English in
   `Scripts/07 ModernUI.Options.lua`; only the row titles and explanations are
   translated.
+* `PUMBILITY` on the rating chip is a hard-coded English caption, not a
+  translated string.
 
 ## Still to do
 
 This is a glassmorphism interface with a Phoenix 2 palette and geometry, not a
 Phoenix 2 reproduction.
 
-**Needs code only:**
+**The one remaining layout change:**
 
 * Horizontal Phoenix-style song select (banner strip along the bottom, vertical
-  difficulty chips) instead of the current vertical Infinity wheel. This is the
-  largest and riskiest remaining change: it touches the music wheel, its
-  metrics and the chart list. Weigh it against the identity rule above — it is
-  a Phoenix layout, not a glassmorphism requirement.
-* A Pumbility-style player rating. The scale exists in `GradeTier`, but nothing
-  aggregates a profile's best charts yet.
-* `GradePlate.png` ships but no screen consumes it yet.
+  difficulty chips) instead of the current vertical Infinity wheel. This is by
+  far the riskiest remaining change: it touches `MusicWheel.lua`, its metrics,
+  and the chart list, and the music wheel resolves children *by position*, so a
+  mistake breaks the screen rather than merely looking wrong. It also cannot be
+  validated without running the game. Weigh it against the identity rule above
+  — it is a Phoenix layout, not a glassmorphism requirement.
 
 **Still blocked on art or engine features:**
 
@@ -269,13 +300,23 @@ Phoenix 2 reproduction.
 ## Implementation notes / gotchas
 
 * **Two grade scales must not drift.** `GradeTiers` in `Scripts/06` mirrors the
-  score cutoffs in `Modules/PIU/Score.Grading.lua`. They are separate tables in
-  separate files, so changing one silently contradicts the other.
+  score cutoffs in `Modules/PIU/Score.Grading.lua`, and `GradeWeights` in
+  `Modules/UI.Pumbility.lua` mirrors them again. They are three separate tables
+  in three files, so changing one silently contradicts the others.
 * **The chart list is addressed by index, not by name.**
   `ChartDisplay.lua` reaches its slots through `GetChild("")[i]` and the scroll
   arrows through `GetChild("")[ItemAmount+1]`. Adding **any** top-level actor to
   that file shifts every index and breaks the whole difficulty row. Modify the
-  existing slots instead.
+  existing slots instead. The song select `default.lua` is the opposite — it is
+  addressed by name, so adding actors there is safe.
+* **`GradePlate.png` already contains the shear.** Never skew a `GradeBadge`
+  frame as well, or the slant doubles.
+* **`Montserrat numbers 40px` is digits only.** Do not put a placeholder like
+  `--` or `...` in it; nothing will render. The rating chip starts blank and
+  hides itself on failure for exactly this reason.
+* **Expensive work belongs after the transition.** The rating chip defers its
+  computation with a `sleep` and a queued command so the screen finishes
+  animating first. Anything that walks the song library should do the same.
 * **The evaluation screen keeps its own grades on purpose.** Those are official
   PIU sprites from `Graphics/LetterGrades`, selected by
   `Modules/PIU/Score.GradingEval.lua`. Replacing them with `GradeTier()` text
@@ -285,9 +326,9 @@ Phoenix 2 reproduction.
 * **`diffuse()` resets the edge colours.** When tinting a gradient readout, call
   `diffuse()` first and `diffusetopedge()` after, never the other way round.
 * **Level 99 is not a level.** Co-op charts report a meter of 99, which the
-  chart list displays as `??`. Anything colouring a level must handle a
-  non-numeric value — `LevelColor` coerces with `tonumber`, and the chart list
-  falls back to the plain text token.
+  chart list displays as `??`. Anything colouring or rating a level must handle
+  that — `LevelColor` coerces with `tonumber`, the chart list falls back to the
+  plain text token, and the rating skips those charts entirely.
 * **Never hard-code colour numbers in gradients.** `diffusetopedge` and friends
   take a colour, and raw numbers there silently ignore the active palette — the
   glass body carried a violet cast for exactly this reason. Use
@@ -339,12 +380,15 @@ Phoenix 2 reproduction.
   screen.
 * A nine-slice panel is 9 actors instead of 2. That is still trivial next to the
   background, but do not build them inside a per-frame `Update`.
+* The rating chip's walk is the single most expensive thing the modern layer
+  does. It runs once per player per session, after the transition, and is
+  cached. Turn it off with `Config.Pumbility = false` on huge libraries.
 * Glow blobs animate with engine-side `bob()` / `pulse()` effects instead of
   Lua `Update` callbacks, so there is no per-frame Lua cost.
 * Dropping the MP4 background (`Style = "aurora"`) removes an H.264 decode
   from every menu screen.
 * Recommended for weak hardware: `Motion = "reduced"`, `GlowBlobs = 2`,
-  `Grain = false`, `Sheen = false`.
+  `Grain = false`, `Sheen = false`, `Pumbility = false`.
 
 ## API for further work
 
@@ -368,9 +412,11 @@ ModernUI.GradeColor("Pass3PS")         -- colour for a grade code or name
 ModernUI.Hairline{ w = 200, y = 0 }    -- 1px separator
 ModernUI.SoftGlow{ zoom = 3, ... }     -- additive radial glow
 ModernUI.FocusRing{ w = 96, h = 96 }   -- rounded outline
+ModernUI.GradeBadge{ label = "..." }   -- sheared rating / grade chip
 ModernUI.GlassCard{ w = 420, h = 160 } -- frosted rounded panel
 ModernUI.ChromeBar{ h = 92 }           -- full-width frosted bar
 LoadModule("UI.GlassCard.lua"){ ... }  -- same card from any screen
+LoadModule("UI.Pumbility.lua")(pn)     -- { rating = n, charts = n } or false
 ```
 
 Remaining ideas: glass treatment for the group wheel, a modern
