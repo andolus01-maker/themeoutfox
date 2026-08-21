@@ -2,7 +2,7 @@
 -- floating raw over the grid, and the theme name picks up the accent.
 local Modern = ModernUI and ModernUI.IsModern()
 
-local ThemeName = "INFINITESIMAL"
+local ThemeName = "GLASSMORPHISM"
 local BuildText = ToUpper(string.format("OutFox %s - %s", ProductVersion(), VersionDate()))
 
 local t = Def.ActorFrame {

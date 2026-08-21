@@ -22,9 +22,10 @@ end
 
 -- Choice tables. The first entry of each is the shipped default.
 ModernUI.Choices = {
-    Style  = { "aurora", "video", "classic" },
-    Accent = { "cyan", "violet", "magenta", "lime", "amber", "ice" },
-    Motion = { "full", "reduced", "off" },
+    Style   = { "aurora", "video", "classic" },
+    Palette = { "phoenix", "infinity" },
+    Accent  = { "phoenix", "cyan", "violet", "magenta", "lime", "amber", "ice" },
+    Motion  = { "full", "reduced", "off" },
 }
 
 local function IsValid(list, value)
@@ -36,7 +37,7 @@ end
 
 -- Apply saved preferences over the compiled-in defaults.
 -- Anything missing or corrupt falls back to the value in 06 ModernUI.lua.
-for _, key in ipairs({ "Style", "Accent", "Motion" }) do
+for _, key in ipairs({ "Style", "Palette", "Accent", "Motion" }) do
     local saved = Load("Modern" .. key)
     if saved and IsValid(ModernUI.Choices[key], saved) then
         ModernUI.Config[key] = saved
@@ -57,6 +58,17 @@ if savedBlobs then
     ModernUI.Config.GlowBlobs = math.max(0, math.min(8, math.floor(savedBlobs)))
 end
 
+-- Shear is clamped hard: past ~0.25 the chrome starts to look broken rather
+-- than stylised.
+local savedSkew = tonumber(Load("ModernSkew"))
+if savedSkew then
+    ModernUI.Config.Skew = math.max(-0.25, math.min(0.25, savedSkew))
+end
+
+-- The palette may have changed above, so rebuild the colour tokens before any
+-- screen gets a chance to read them.
+ModernUI.ApplyPalette()
+
 -- ---------------------------------------------------------------------------
 -- Option row builders
 -- ---------------------------------------------------------------------------
@@ -65,8 +77,9 @@ end
 -- [ScreenInfOptionsUI], and every Languages/*.ini carries the matching
 -- [OptionTitles] / [OptionExplanations] strings. Do not add those keys again.
 --
--- Grain, Vignette, Scanlines and GlowBlobs are read above but have no row
--- yet; adding one also means adding strings to all five language files.
+-- Palette, Skew, Grain, Vignette, Scanlines and GlowBlobs are read above but
+-- have no row yet; adding one also means adding strings to all five language
+-- files.
 --
 -- Note: the choice labels below are still hard-coded English. Only the row
 -- titles and explanations go through the language files.
@@ -114,7 +127,7 @@ end
 
 function ModernUI.OptionRow.Accent()
     return BuildRow("ModernAccent", ModernUI.Choices.Accent,
-        { "Cyan", "Violet", "Magenta", "Lime", "Amber", "Ice" })
+        { "Phoenix", "Cyan", "Violet", "Magenta", "Lime", "Amber", "Ice" })
 end
 
 function ModernUI.OptionRow.Motion()
