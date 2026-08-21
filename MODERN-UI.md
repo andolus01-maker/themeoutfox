@@ -8,6 +8,22 @@ existing theme features intact.
 Everything is gated behind a single style switch: `Style = "classic"`
 restores the original look on every screen.
 
+## Design target
+
+The visual target is **Pump It Up Phoenix 2**, released in July 2026 as the
+18th arcade installment in the series. Notes that matter for theming:
+
+* Phoenix 2 keeps the dark UI of the 2023 Phoenix generation but replaces its
+  blue-cyan identity with **electric green**. That is why the default accent is
+  `phoenix2` and not `phoenix`.
+* It renews **Pumbility**, the player rating built from a player's 50
+  highest-rated songs, and shows song titles in real time in the interface.
+* Its typography is heavy, condensed and italic, and panels are sheared on a
+  diagonal — hence `Config.Skew`.
+
+Do not assume Phoenix 2 is only a version bump of Phoenix; it is a separate
+installment with its own identity.
+
 ## What changed
 
 ### Phase 1 — foundation
@@ -45,8 +61,8 @@ restores the original look on every screen.
 
 | Area | Before | Now |
 | --- | --- | --- |
-| Palette | Single violet-leaning set of tokens | Swappable palettes; the new default **phoenix** palette is near-black navy with pure white type, `infinity` keeps the violet set |
-| Accent | `cyan` default | New **phoenix** ramp (near-white cyan on deep blue), now the default |
+| Palette | Single violet-leaning set of tokens | Swappable palettes; the default **phoenix** palette is near-black navy with pure white type, `infinity` keeps the violet set |
+| Accent | `cyan` default | **phoenix2** (electric green) is the default; `phoenix` keeps the near-white cyan of the 2023 generation |
 | Geometry | Upright panels only | Shared **diagonal shear** (`Config.Skew`) applied to hairlines, glass cards and chrome bars |
 | Chart levels | Infinity difficulty colours | `ModernUI.LevelColor()` — Phoenix-style colour per level tier |
 | Grades | Engine grade scale | `ModernUI.GradeTier()` — SSS+ → F scale with `GradeColor()` |
@@ -57,16 +73,16 @@ Defaults live at the top of `Scripts/06 ModernUI.lua`:
 
 ```lua
 ModernUI.Config = {
-    Style      = "aurora",   -- "aurora" | "video" | "classic"
-    Palette    = "phoenix",  -- phoenix | infinity
-    Accent     = "phoenix",  -- phoenix | cyan | violet | magenta | lime | amber | ice
-    Motion     = "full",     -- full | reduced | off
+    Style      = "aurora",    -- "aurora" | "video" | "classic"
+    Palette    = "phoenix",   -- phoenix | infinity
+    Accent     = "phoenix2",  -- phoenix2 | phoenix | cyan | violet | magenta | lime | amber | ice
+    Motion     = "full",      -- full | reduced | off
     Glass      = true,
     Grain      = true,
     Vignette   = true,
     Scanlines  = false,
     GlowBlobs  = 5,
-    Skew       = 0.06,       -- 0 = upright panels, clamped to +/-0.25
+    Skew       = 0.06,        -- 0 = upright panels, clamped to +/-0.25
 }
 ```
 
@@ -106,14 +122,15 @@ colours apply as soon as you leave the options screen.
   from `OutFoxPrefs.ini` but have **no option row yet**, so they can only be
   changed by editing `Scripts/06 ModernUI.lua` or the prefs file. Adding a row
   also means adding strings to all five language files.
-* The per-choice labels (`Aurora` / `Video` / `Classic`, `Phoenix` / `Cyan` /
-  …) are still hard-coded English in `Scripts/07 ModernUI.Options.lua`; only
-  the row titles and explanations are translated.
+* The per-choice labels (`Aurora` / `Video` / `Classic`, `Phoenix 2` /
+  `Phoenix` / …) are still hard-coded English in
+  `Scripts/07 ModernUI.Options.lua`; only the row titles and explanations are
+  translated.
 
 ## Still missing for a true Phoenix 2 look
 
-Be realistic about what is done: the layer above is a *modern* interface with
-a Phoenix-leaning palette and geometry, not a Phoenix reproduction.
+Be realistic about what is done: the layer above is a *modern* interface with a
+Phoenix 2 palette and geometry, not a Phoenix 2 reproduction.
 
 **Needs code only (doable next):**
 
