@@ -1,8 +1,9 @@
-# Infinitesimal — Modern UI v2
+# Glassmorphism — Modern UI v2
 
-A modernisation layer for this OutFox theme. The goal is to look and feel
-newer than stock Pump It Up (Infinity / Prime / Phoenix) while keeping the
-Infinity identity and **all** existing theme features intact.
+A modernisation layer for this OutFox theme, a fork of **Infinitesimal** by
+dj505 & SheepyChris. The goal is to look and feel newer than stock Pump It Up
+(Infinity / Prime / Phoenix) while keeping the Infinity identity and **all**
+existing theme features intact.
 
 Everything is gated behind a single style switch: `Style = "classic"`
 restores the original look on every screen.
@@ -18,7 +19,7 @@ restores the original look on every screen.
 | Avatar cards | Flat slot | Elevated card with accent ring and accent-coloured level chip |
 | Title screen | Hard 0.96 zoom pulse | Accent halo behind the logo, softer breathing, glass info chip |
 | Corner arrows | Fixed 0.25s glow | Accent-tinted, longer soft glow, motion-token driven easing |
-| Design values | Hard-coded per file | Central **design tokens** (colour / motion / elevation) |
+| Design values | Hard-coded per file | Central **design tokens** (colour / motion / elevation / geometry) |
 
 ### Phase 2 — screen surfaces
 
@@ -40,29 +41,41 @@ restores the original look on every screen.
 | Service build stamp | Raw text over the grid | Glass chip with an accent bar, theme name highlighted in the accent |
 | Settings | Editing `Scripts/06 ModernUI.lua` by hand | Persisted option rows saved to `Save/OutFoxPrefs.ini` |
 
+### Phase 4 — Phoenix direction
+
+| Area | Before | Now |
+| --- | --- | --- |
+| Palette | Single violet-leaning set of tokens | Swappable palettes; the new default **phoenix** palette is near-black navy with pure white type, `infinity` keeps the violet set |
+| Accent | `cyan` default | New **phoenix** ramp (near-white cyan on deep blue), now the default |
+| Geometry | Upright panels only | Shared **diagonal shear** (`Config.Skew`) applied to hairlines, glass cards and chrome bars |
+| Chart levels | Infinity difficulty colours | `ModernUI.LevelColor()` — Phoenix-style colour per level tier |
+| Grades | Engine grade scale | `ModernUI.GradeTier()` — SSS+ → F scale with `GradeColor()` |
+
 ## Configuration
 
 Defaults live at the top of `Scripts/06 ModernUI.lua`:
 
 ```lua
 ModernUI.Config = {
-    Style      = "aurora",  -- "aurora" | "video" | "classic"
-    Accent     = "cyan",    -- cyan | violet | magenta | lime | amber | ice
-    Motion     = "full",    -- full | reduced | off
+    Style      = "aurora",   -- "aurora" | "video" | "classic"
+    Palette    = "phoenix",  -- phoenix | infinity
+    Accent     = "phoenix",  -- phoenix | cyan | violet | magenta | lime | amber | ice
+    Motion     = "full",     -- full | reduced | off
     Glass      = true,
     Grain      = true,
     Vignette   = true,
     Scanlines  = false,
     GlowBlobs  = 5,
+    Skew       = 0.06,       -- 0 = upright panels, clamped to +/-0.25
 }
 ```
 
 `Scripts/07 ModernUI.Options.lua` loads after that file and overrides any of
 those values with what the player saved in `Save/OutFoxPrefs.ini`
-(`ModernStyle`, `ModernAccent`, `ModernMotion`, `ModernGlass`, `ModernGrain`,
-`ModernVignette`, `ModernScanlines`, `ModernGlowBlobs`). Invalid or missing
-values silently fall back to the defaults above, so a hand-edited prefs file
-can never break the theme.
+(`ModernStyle`, `ModernPalette`, `ModernAccent`, `ModernMotion`,
+`ModernGlass`, `ModernGrain`, `ModernVignette`, `ModernScanlines`,
+`ModernGlowBlobs`, `ModernSkew`). Invalid or missing values silently fall back
+to the defaults above, so a hand-edited prefs file can never break the theme.
 
 ### Option rows (already wired)
 
@@ -79,38 +92,48 @@ LineModernGlass="lua,ModernUI.OptionRow.Glass()"
 ```
 
 The matching `[OptionTitles]` and `[OptionExplanations]` strings already ship
-in **all five** language files (`en`, `pl`, `pt-BR`, `zh-Hans`, `zh-Hant`):
-
-```ini
-[OptionTitles]
-ModernStyle=Visual Style
-ModernAccent=Accent Colour
-ModernMotion=Motion
-ModernGlass=Glass Panels
-
-[OptionExplanations]
-ModernStyle=Aurora is the modern background, Classic restores the original theme.
-ModernAccent=Sets the highlight colour used across the whole interface.
-ModernMotion=Reduce or disable animation for low-end hardware.
-ModernGlass=Frosted panels behind menus and HUD elements.
-```
-
+in **all five** language files (`en`, `pl`, `pt-BR`, `zh-Hans`, `zh-Hant`).
 Do not add those keys again — they are present. If you add a **new** language
-file, copy the eight keys above across, otherwise OutFox shows a visible
+file, copy the eight keys across, otherwise OutFox shows a visible
 missing-string warning on the options screen.
 
-Style and background changes apply after a theme reload; accent colours apply
-as soon as you leave the options screen.
+Style, palette and background changes apply after a theme reload; accent
+colours apply as soon as you leave the options screen.
 
 ### Known gaps
 
-* `Grain`, `Vignette`, `Scanlines` and `GlowBlobs` are read from
-  `OutFoxPrefs.ini` but have **no option row yet**, so they can only be
-  changed by editing `Scripts/06 ModernUI.lua` or the prefs file. Adding a
-  row also means adding strings to all five language files.
-* The per-choice labels (`Aurora` / `Video` / `Classic`, `Cyan` / `Violet` /
+* `Palette`, `Skew`, `Grain`, `Vignette`, `Scanlines` and `GlowBlobs` are read
+  from `OutFoxPrefs.ini` but have **no option row yet**, so they can only be
+  changed by editing `Scripts/06 ModernUI.lua` or the prefs file. Adding a row
+  also means adding strings to all five language files.
+* The per-choice labels (`Aurora` / `Video` / `Classic`, `Phoenix` / `Cyan` /
   …) are still hard-coded English in `Scripts/07 ModernUI.Options.lua`; only
   the row titles and explanations are translated.
+
+## Still missing for a true Phoenix 2 look
+
+Be realistic about what is done: the layer above is a *modern* interface with
+a Phoenix-leaning palette and geometry, not a Phoenix reproduction.
+
+**Needs code only (doable next):**
+
+* `ModernUI.LevelColor()` and `ModernUI.GradeTier()` exist but are **not wired
+  into any screen yet**. The chart list and the evaluation screen still use the
+  Infinity difficulty colours and the engine grade scale.
+* The grade thresholds in `GradeTiers` are approximations of the official
+  cutoffs. They live in one table and are meant to be tuned.
+* Horizontal Phoenix-style song select (banner strip along the bottom, vertical
+  difficulty chips) instead of the current vertical Infinity wheel. This is the
+  largest and riskiest remaining change: it touches the music wheel, its
+  metrics and the chart list.
+
+**Needs new art or fonts (cannot be done in Lua):**
+
+* **Rounded corners.** OutFox quads cannot be rounded; this needs a 9-slice
+  texture set.
+* **The italic condensed display font** Phoenix uses. The theme currently ships
+  Montserrat and VCR OSD Mono.
+* **Noteskins, grade plates and judgement art** in the Phoenix style.
 
 ## Performance notes
 
@@ -142,14 +165,22 @@ as soon as you leave the options screen.
   `pulse = true` is accepted as "use the default ratio"; the value is run
   through `tonumber()` so a boolean can never reach `effectmagnitude()`,
   which only takes numbers.
-* **Colour tokens carry their own alpha.** `ModernUI.Tokens.Hairline` is
-  `color("1,1,1,0.16")`, and `diffusealpha()` *replaces* that alpha rather
-  than multiplying it. `ModernUI.Hairline` therefore defaults its alpha to
-  the token's own value; pass `alpha` explicitly only when you really want a
+* **Colour tokens carry their own alpha.** `ModernUI.Tokens.Hairline` has an
+  alpha baked in, and `diffusealpha()` *replaces* that alpha rather than
+  multiplying it. `ModernUI.Hairline` therefore defaults its alpha to the
+  token's own value; pass `alpha` explicitly only when you really want a
   brighter line (the glass card top highlight does).
+* **`ApplyPalette()` mutates `ModernUI.Tokens` in place.** Never reassign the
+  table: other files already hold a reference to it and would keep rendering
+  the old palette. `Scripts/07` calls `ApplyPalette()` again after reading the
+  saved preferences.
+* **A sheared bar needs bleed.** `skewx` pulls the top and bottom edges
+  sideways, which would expose a wedge of background at the screen edges.
+  `ModernUI.ChromeBar` widens itself by that offset automatically; do the same
+  if you shear a full-width panel yourself.
 * **Square corners are intentional.** OutFox quads cannot be rounded
-  without extra textures, so depth comes from gradients, hairlines and
-  shadow quads.
+  without extra textures, so depth comes from gradients, hairlines, the shear
+  and shadow quads.
 * **Contrast.** Wherever the original art was a light plate with
   `Color.Black` text, modern mode dims the plate *and* switches the type to
   `ModernUI.Tokens.Text`; never change one without the other.
@@ -163,10 +194,15 @@ as soon as you leave the options screen.
 ModernUI.Accent(1)                     -- bright accent colour
 ModernUI.Accent(2)                     -- deep accent colour
 ModernUI.Tokens.Text / .TextDim / ...  -- colour tokens
+ModernUI.ApplyPalette("phoenix")       -- swap palette at runtime
 ModernUI.IsModern() / .UseGlass()      -- feature gates
 ModernUI.MotionScale()                 -- 0 | 0.55 | 1
 ModernUI.T(0.5)                        -- duration scaled by motion setting
+ModernUI.Skew()                        -- shared horizontal shear
 ModernUI.EaseIn(actor, 0.5)            -- signature easing
+ModernUI.LevelColor(21)                -- Phoenix colour for a chart level
+ModernUI.GradeTier(0.9912)             -- "SSS", accepts 0-1 or 0-100
+ModernUI.GradeColor("SSS")             -- colour for a grade name
 ModernUI.Hairline{ w = 200, y = 0 }    -- 1px separator
 ModernUI.SoftGlow{ zoom = 3, ... }     -- additive radial glow
 ModernUI.GlassCard{ w = 420, h = 160 } -- frosted panel
