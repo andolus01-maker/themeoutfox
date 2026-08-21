@@ -8,9 +8,29 @@ existing theme features intact.
 Everything is gated behind a single style switch: `Style = "classic"`
 restores the original look on every screen.
 
-## Design target
+## Identity
 
-The visual target is **Pump It Up Phoenix 2**, released in July 2026 as the
+Keep these in priority order when adding anything:
+
+1. **Glassmorphism** — translucent frosted panels, layered depth, hairline
+   highlights, the background still visible through the chrome.
+2. **Modern UI** — design tokens instead of hard-coded values, restrained
+   motion, generous spacing, light typography.
+3. **Phoenix flavour** — accent hue, the diagonal shear, level and grade tiers.
+
+Phoenix is the *inspiration*, not the target. This is a glassmorphism theme for
+Project OutFox, not a Phoenix reskin. **If a Phoenix cue ever fights the
+frosted-glass look, the glass wins.** Two consequences that already follow from
+that rule:
+
+* Panel bodies must stay **translucent and palette-tinted**. An opaque plate is
+  a regression, no matter how accurate its colour is.
+* The shear is deliberately small (`0.03`). It is a garnish; the frosted
+  translucency is the headline effect.
+
+## Design reference
+
+The visual reference is **Pump It Up Phoenix 2**, released in July 2026 as the
 18th arcade installment in the series. Notes that matter for theming:
 
 * Phoenix 2 keeps the dark UI of the 2023 Phoenix generation but replaces its
@@ -57,13 +77,14 @@ installment with its own identity.
 | Service build stamp | Raw text over the grid | Glass chip with an accent bar, theme name highlighted in the accent |
 | Settings | Editing `Scripts/06 ModernUI.lua` by hand | Persisted option rows saved to `Save/OutFoxPrefs.ini` |
 
-### Phase 4 — Phoenix direction
+### Phase 4 — Phoenix flavour and glass hardening
 
 | Area | Before | Now |
 | --- | --- | --- |
 | Palette | Single violet-leaning set of tokens | Swappable palettes; the default **phoenix** palette is near-black navy with pure white type, `infinity` keeps the violet set |
 | Accent | `cyan` default | **phoenix2** (electric green) is the default; `phoenix` keeps the near-white cyan of the 2023 generation |
-| Geometry | Upright panels only | Shared **diagonal shear** (`Config.Skew`) applied to hairlines, glass cards and chrome bars |
+| Glass body | Gradient edges hard-coded as raw violet numbers, ignoring the palette | Edges derived from `Tokens.SurfaceHi` and `Tokens.Base` via `ModernUI.Tint()`, plus a dedicated `Glass` token |
+| Geometry | Upright panels only | Subtle shared **diagonal shear** (`Config.Skew = 0.03`) on hairlines, glass cards and chrome bars |
 | Chart levels | Infinity difficulty colours | `ModernUI.LevelColor()` — Phoenix-style colour per level tier |
 | Grades | Engine grade scale | `ModernUI.GradeTier()` — SSS+ → F scale with `GradeColor()` |
 
@@ -82,7 +103,7 @@ ModernUI.Config = {
     Vignette   = true,
     Scanlines  = false,
     GlowBlobs  = 5,
-    Skew       = 0.06,        -- 0 = upright panels, clamped to +/-0.25
+    Skew       = 0.03,        -- 0 = upright panels, clamped to +/-0.25
 }
 ```
 
@@ -92,6 +113,19 @@ those values with what the player saved in `Save/OutFoxPrefs.ini`
 `ModernGlass`, `ModernGrain`, `ModernVignette`, `ModernScanlines`,
 `ModernGlowBlobs`, `ModernSkew`). Invalid or missing values silently fall back
 to the defaults above, so a hand-edited prefs file can never break the theme.
+
+### Palette tokens
+
+| Token | Used for |
+| --- | --- |
+| `Base` | Deepest background, and the shaded bottom edge of glass |
+| `BaseAlt` | Background tint variation |
+| `Surface` | Opaque panels and fallback for glass |
+| `SurfaceHi` | The lit top edge of glass, raised surfaces |
+| `Glass` | Frosted panel body, tuned independently of opaque surfaces |
+| `Text` / `TextDim` | Primary and secondary type |
+| `Hairline` | 1px separators; carries its own alpha |
+| `Good` / `Warn` / `Bad` | Status colours, shared by all palettes |
 
 ### Option rows (already wired)
 
@@ -127,9 +161,9 @@ colours apply as soon as you leave the options screen.
   `Scripts/07 ModernUI.Options.lua`; only the row titles and explanations are
   translated.
 
-## Still missing for a true Phoenix 2 look
+## Still to do
 
-Be realistic about what is done: the layer above is a *modern* interface with a
+Be realistic about what is done: this is a glassmorphism interface with a
 Phoenix 2 palette and geometry, not a Phoenix 2 reproduction.
 
 **Needs code only (doable next):**
@@ -142,12 +176,17 @@ Phoenix 2 palette and geometry, not a Phoenix 2 reproduction.
 * Horizontal Phoenix-style song select (banner strip along the bottom, vertical
   difficulty chips) instead of the current vertical Infinity wheel. This is the
   largest and riskiest remaining change: it touches the music wheel, its
-  metrics and the chart list.
+  metrics and the chart list. Weigh it against the identity rule above — it is
+  a Phoenix layout, not a glassmorphism requirement.
 
 **Needs new art or fonts (cannot be done in Lua):**
 
 * **Rounded corners.** OutFox quads cannot be rounded; this needs a 9-slice
-  texture set.
+  texture set. This is the single biggest visual gap for glassmorphism, which
+  normally leans on soft rounded panes.
+* **A real blur.** True frosted glass blurs what is behind it; without a
+  render-to-texture pass the theme approximates it with translucency, gradients
+  and grain.
 * **The italic condensed display font** Phoenix uses. The theme currently ships
   Montserrat and VCR OSD Mono.
 * **Noteskins, grade plates and judgement art** in the Phoenix style.
@@ -166,6 +205,10 @@ Phoenix 2 palette and geometry, not a Phoenix 2 reproduction.
 
 ## Implementation notes / gotchas
 
+* **Never hard-code colour numbers in gradients.** `diffusetopedge` and friends
+  take a colour, and raw numbers there silently ignore the active palette — the
+  glass body carried a violet cast for exactly this reason. Use
+  `ModernUI.Tint(token, alpha)` to rebuild a palette token at a given alpha.
 * **`GetChild("")` in the music wheel.** The scroll handler resolves the
   index label through the *last unnamed child* of the wheel item. Every
   actor the modern layer adds there is explicitly **named** (`Halo`,
@@ -195,9 +238,9 @@ Phoenix 2 palette and geometry, not a Phoenix 2 reproduction.
   sideways, which would expose a wedge of background at the screen edges.
   `ModernUI.ChromeBar` widens itself by that offset automatically; do the same
   if you shear a full-width panel yourself.
-* **Square corners are intentional.** OutFox quads cannot be rounded
-  without extra textures, so depth comes from gradients, hairlines, the shear
-  and shadow quads.
+* **Square corners are intentional** — for now. OutFox quads cannot be rounded
+  without extra textures, so depth comes from the gradient, hairlines, the
+  shear and shadow quads.
 * **Contrast.** Wherever the original art was a light plate with
   `Color.Black` text, modern mode dims the plate *and* switches the type to
   `ModernUI.Tokens.Text`; never change one without the other.
@@ -211,6 +254,7 @@ Phoenix 2 palette and geometry, not a Phoenix 2 reproduction.
 ModernUI.Accent(1)                     -- bright accent colour
 ModernUI.Accent(2)                     -- deep accent colour
 ModernUI.Tokens.Text / .TextDim / ...  -- colour tokens
+ModernUI.Tint(token, 0.4)              -- palette token at a given alpha
 ModernUI.ApplyPalette("phoenix")       -- swap palette at runtime
 ModernUI.IsModern() / .UseGlass()      -- feature gates
 ModernUI.MotionScale()                 -- 0 | 0.55 | 1

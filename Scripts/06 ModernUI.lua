@@ -1,12 +1,23 @@
 -- =====================================================================
 -- Glassmorphism :: Modern UI (v2)
 -- =====================================================================
--- A small design system that sits on top of the original Infinity look:
+-- A small design system that sits on top of the original Infinity look.
 --
---   * colour tokens      (palette / accent ramps)
+-- IDENTITY, in priority order. Keep this order when adding anything:
+--   1. Glassmorphism  - translucent frosted panels, layered depth,
+--                       hairline highlights, content visible through chrome
+--   2. Modern UI       - design tokens, restrained motion, generous spacing
+--   3. Phoenix flavour - accent hue, diagonal shear, level/grade tiers
+--
+-- Phoenix is the *inspiration*, not the target: this is a glassmorphism theme
+-- for Project OutFox, not a Phoenix reskin. If a Phoenix cue ever fights the
+-- frosted-glass look, the glass wins.
+--
+-- What lives here:
+--   * colour tokens      (palette / accent ramps / glass tint)
 --   * motion tokens      (single place to slow down or disable motion)
 --   * elevation helpers  (glass cards, hairlines, soft glows)
---   * geometry tokens    (the Phoenix-style diagonal shear)
+--   * geometry tokens    (the diagonal shear)
 --
 -- Nothing else in the theme has to be touched to retune the look, every
 -- switch lives in ModernUI.Config below.
@@ -33,9 +44,9 @@ ModernUI.Config = {
     Vignette   = true,
     Scanlines  = false,
     GlowBlobs  = 5,
-    -- Horizontal shear applied to chrome, the strongest "Phoenix" cue.
-    -- 0 = the original upright panels, 0.06 is a subtle lean.
-    Skew       = 0.06,
+    -- Horizontal shear on chrome: a Phoenix garnish, deliberately subtle so
+    -- the frosted glass stays the headline effect. 0 = upright panels.
+    Skew       = 0.03,
 }
 
 -- ---------------------------------------------------------------------
@@ -62,6 +73,7 @@ local Palettes = {
         BaseAlt   = "#120E2E",
         Surface   = "#1A1640",
         SurfaceHi = "#2A2470",
+        Glass     = "#231C57",
         Text      = "#F4F6FF",
         TextDim   = "#9AA1CC",
         Hairline  = "1,1,1,0.16",
@@ -73,6 +85,7 @@ local Palettes = {
         BaseAlt   = "#0A1224",
         Surface   = "#101B33",
         SurfaceHi = "#1B2E52",
+        Glass     = "#16253F",
         Text      = "#FFFFFF",
         TextDim   = "#93A6C4",
         Hairline  = "1,1,1,0.20",
@@ -107,6 +120,16 @@ local function ColorAlpha(shade)
     end
     return 1
 end
+
+-- Rebuild a colour token at a given alpha. Gradient edges need this: hard
+-- coding raw RGB numbers there would silently ignore the active palette.
+local function Tint(shade, alpha)
+    if type(shade) ~= "table" then return color("0,0,0," .. tostring(alpha)) end
+    return color(string.format("%.4f,%.4f,%.4f,%.4f",
+        shade[1] or 0, shade[2] or 0, shade[3] or 0, alpha))
+end
+
+ModernUI.Tint = Tint
 
 -- Accent ramp, 1 = bright end, 2 = deep end
 function ModernUI.Accent(index)
@@ -284,10 +307,14 @@ function ModernUI.SoftGlow(params)
     }
 end
 
--- Frosted panel: shadow -> gradient body -> top highlight -> accent bar.
+-- Frosted panel: shadow -> translucent gradient body -> top highlight ->
+-- accent bar. This is the core of the theme's identity, so keep it reading as
+-- *glass*: the body must stay translucent and tinted from the palette, never
+-- an opaque plate.
+--
 -- Corners stay square on purpose, OutFox quads cannot be rounded without
--- shipping extra textures, so the modern look leans on gradients, hairlines
--- and the shared diagonal shear instead.
+-- shipping extra textures, so depth comes from the gradient, the hairline,
+-- the shadow and a slight shear.
 function ModernUI.GlassCard(params)
     params = params or {}
     local width  = params.w or 320
@@ -315,15 +342,17 @@ function ModernUI.GlassCard(params)
         end
     }
 
-    -- Frosted body, brighter on top so it reads as lit from above
+    -- Frosted body: lit along the top edge, shaded at the bottom, so it reads
+    -- as a pane catching light from above. Both edges come from the palette so
+    -- switching palettes actually retints the glass.
     card[#card + 1] = Def.Quad {
         InitCommand = function(self)
             self:zoomto(width, height)
                 :halign(halign):valign(valign)
                 :skewx(skew)
-                :diffuse(ModernUI.Tokens.Surface)
-                :diffusetopedge(color(string.format("0.16,0.14,0.36,%.3f", alpha)))
-                :diffusebottomedge(color(string.format("0.04,0.04,0.11,%.3f", math.min(alpha + 0.2, 1))))
+                :diffuse(ModernUI.Tokens.Glass or ModernUI.Tokens.Surface)
+                :diffusetopedge(Tint(ModernUI.Tokens.SurfaceHi, alpha))
+                :diffusebottomedge(Tint(ModernUI.Tokens.Base, math.min(alpha + 0.2, 1)))
         end
     }
 
