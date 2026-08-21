@@ -12,8 +12,19 @@
 -- current screen, which the original theme could not do.
 -- =====================================================================
 
+-- This file is normally reached through BGAnimations/AnimatedBackground.lua,
+-- which already checks for the design system. Guard anyway so a direct
+-- LoadActor of this file can never take the whole theme down with it.
+if not ModernUI then
+    Warn("ModernBackground.lua: Modern UI design system unavailable, falling back to the original background")
+    return LoadActor(THEME:GetPathG("", "Background"))
+end
+
 local Motion = ModernUI.MotionScale()
-local Blobs = ModernUI.Config.GlowBlobs or 5
+-- Same clamp the options loader applies, so a hand-edited prefs file or a
+-- bad Config value cannot spawn hundreds of additive sprites.
+local Blobs = math.floor(tonumber(ModernUI.Config.GlowBlobs) or 5)
+Blobs = math.max(0, math.min(8, Blobs))
 
 local function IsTitleLike()
     local screen = SCREENMAN:GetTopScreen()

@@ -2,6 +2,7 @@
 -- floating raw over the grid, and the theme name picks up the accent.
 local Modern = ModernUI and ModernUI.IsModern()
 
+local ThemeName = "INFINITESIMAL"
 local BuildText = ToUpper(string.format("OutFox %s - %s", ProductVersion(), VersionDate()))
 
 local t = Def.ActorFrame {
@@ -30,12 +31,13 @@ t[#t+1] = Def.BitmapText {
     InitCommand=function(self)
         self:xy(SCREEN_LEFT + 20, SCREEN_BOTTOM - 20)
         :halign(0):valign(1)
-        :settext("INFINITESIMAL\n"..BuildText)
+        :settext(ThemeName.."\n"..BuildText)
 
         if Modern then
             self:diffuse(ModernUI.Tokens.TextDim)
-            -- Highlight just the theme name on the first line
-            self:AddAttribute(0, { Length = 14, Diffuse = ModernUI.Accent(1) })
+            -- Highlight just the theme name on the first line. The length is
+            -- taken from the string so it can never spill onto the newline.
+            self:AddAttribute(0, { Length = #ThemeName, Diffuse = ModernUI.Accent(1) })
         end
     end
 }

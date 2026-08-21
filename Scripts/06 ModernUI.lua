@@ -58,6 +58,15 @@ ModernUI.Tokens = {
     Hairline  = color("1,1,1,0.16"),
 }
 
+-- Alpha carried by a colour token, used so helpers can keep the alpha that
+-- is baked into the token instead of silently replacing it with 1.
+local function ColorAlpha(shade)
+    if type(shade) == "table" and type(shade[4]) == "number" then
+        return shade[4]
+    end
+    return 1
+end
+
 -- Accent ramp, 1 = bright end, 2 = deep end
 function ModernUI.Accent(index)
     local ramp = AccentRamps[ModernUI.Config.Accent] or AccentRamps.cyan
@@ -118,7 +127,10 @@ function ModernUI.Hairline(params)
     local width = params.w or 200
     local thickness = params.thickness or 1
     local shade = params.color or ModernUI.Tokens.Hairline
-    local alpha = params.alpha or 1
+    -- diffusealpha() replaces the alpha carried by the colour token, so the
+    -- token's own alpha is the default here. Callers that want a brighter
+    -- line (the glass card highlight, for example) still pass params.alpha.
+    local alpha = params.alpha or ColorAlpha(shade)
 
     return Def.Quad {
         InitCommand = function(self)
@@ -134,18 +146,26 @@ end
 function ModernUI.SoftGlow(params)
     params = params or {}
     local shade = params.color or ModernUI.Accent(1)
+    local baseZoom = params.zoom or 1
 
     return Def.Sprite {
         Texture = THEME:GetPathG("", "Background/circle"),
         InitCommand = function(self)
             self:xy(params.x or 0, params.y or 0)
-                :zoom(params.zoom or 1)
+                :zoom(baseZoom)
                 :blend("BlendMode_Add")
                 :diffuse(shade)
                 :diffusealpha(params.alpha or 0.2)
 
             if params.pulse and ModernUI.MotionScale() > 0 then
-                self:pulse():effectmagnitude(1, params.pulse or 1.06, 1)
+                -- pulse() drives zoom directly, so the magnitude has to be
+                -- expressed in absolute zoom. Feeding it a bare 1 -> 1.06
+                -- would throw away baseZoom and snap the glow down to 1x.
+                -- params.pulse may be `true` (default ratio) or a number
+                -- describing how far the glow should breathe.
+                local ratio = tonumber(params.pulse) or 1.06
+                self:pulse()
+                    :effectmagnitude(baseZoom, baseZoom * ratio, 1)
                     :effectperiod(ModernUI.T(params.period or 4))
                     :effectoffset(params.offset or 0)
             end
