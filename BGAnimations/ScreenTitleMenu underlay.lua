@@ -5,6 +5,12 @@
 -- animation and glass info chips for the song count and engine build.
 -- All original behaviour (mod reset, Discord presence, memory card
 -- prompts) is untouched.
+--
+-- The wordmark in Graphics/Logo is raster art of the old theme name, so
+-- renaming the theme can never change what it says. In modern mode that
+-- art is hidden and the name is drawn as live text instead, which keeps
+-- the title screen honest about which theme is loaded. Classic mode
+-- still shows the original logo art exactly as before.
 -- =====================================================================
 
 local Modern = ModernUI and ModernUI.IsModern()
@@ -12,6 +18,15 @@ local function Dur(seconds)
     if ModernUI then return ModernUI.T(seconds) end
     return seconds
 end
+
+-- Guarded: not every engine build exposes GetThemeDisplayName, and the
+-- title screen is the worst possible place to risk a nil call.
+local ThemeName = "Glassmorphism"
+if THEME.GetThemeDisplayName then
+    local ok, name = pcall(function() return THEME:GetThemeDisplayName() end)
+    if ok and name and name ~= "" then ThemeName = name end
+end
+local Wordmark = ToUpper(ThemeName)
 
 local t = Def.ActorFrame {
     OnCommand=function(self)
@@ -55,9 +70,51 @@ local t = Def.ActorFrame {
             pulse = 1.07, period = 7, offset = 1.2, color = ModernUI.Accent(2),
         } or Def.Actor {},
 
+        -- Live text wordmark. Two passes: an additive bloom copy behind a
+        -- crisp gradient copy, which is how the old art faked its glow
+        -- without needing a second texture.
+        Modern and Def.ActorFrame {
+            Def.BitmapText {
+                Font="Montserrat semibold 40px",
+                Text=Wordmark,
+                InitCommand=function(self)
+                    self:zoom(1.62):skewx(-0.2):maxwidth(440)
+                    :diffuse(ModernUI.Accent(1)):diffusealpha(0.20)
+                    :blend("BlendMode_Add"):queuecommand("Bloom")
+                end,
+                BloomCommand=function(self)
+                    self:accelerate(Dur(3.4288)):zoom(1.74):diffusealpha(0.09)
+                    :decelerate(Dur(3.4288)):zoom(1.62):diffusealpha(0.20)
+                    :queuecommand("Bloom")
+                end,
+            },
+
+            Def.BitmapText {
+                Font="Montserrat semibold 40px",
+                Text=Wordmark,
+                InitCommand=function(self)
+                    self:zoom(1.55):skewx(-0.2):maxwidth(440):shadowlength(2)
+                    :diffuse(Color.White)
+                    :diffusetopedge(ModernUI.Accent(1))
+                    :diffusebottomedge(ModernUI.Accent(2))
+                end,
+            },
+
+            ModernUI.Hairline { w = 520, y = 40 },
+
+            Def.BitmapText {
+                Font="Montserrat normal 20px",
+                Text="M O D E R N   U I",
+                InitCommand=function(self)
+                    self:y(62):zoom(0.8):diffuse(ModernUI.Tokens.TextDim)
+                end,
+            },
+        } or Def.Actor {},
+
         LoadActor(THEME:GetPathG("", "Logo/Parts"))..{
             InitCommand=function(self)
                 self:zoom(0.8)
+                if Modern then self:visible(false) end
             end
         },
 
@@ -66,7 +123,11 @@ local t = Def.ActorFrame {
             OnCommand=function(self)
                 self:diffusealpha(0)
                 :zoom(0.8)
-                :queuecommand("Pulse")
+                if Modern then
+                    self:visible(false)
+                    return
+                end
+                self:queuecommand("Pulse")
             end,
             PulseCommand=function(self)
                 self:sleep(Dur(3.4288))
@@ -85,7 +146,11 @@ local t = Def.ActorFrame {
             OnCommand=function(self)
                 self:zoom(0.83)
                 :diffusealpha(0)
-                :queuecommand("Flash")
+                if Modern then
+                    self:visible(false)
+                    return
+                end
+                self:queuecommand("Flash")
             end,
             FlashCommand=function(self)
                 self:accelerate(Dur(3.4288))
