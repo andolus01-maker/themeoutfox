@@ -1,3 +1,21 @@
+-- =====================================================================
+-- Profile select
+-- =====================================================================
+-- Modern mode turns the selection window into a frosted plate with an
+-- accent hairline, tints the card frame art with the accent, and moves
+-- all type onto the palette tokens. Classic mode keeps the original
+-- stacked black quads verbatim.
+--
+-- Everything functional is untouched: UpdateInternal3 resolves every
+-- frame through GetChild("Name"), so the names below must not change.
+-- =====================================================================
+
+local Modern = ModernUI and ModernUI.IsModern()
+local function Dur(seconds)
+    if ModernUI then return ModernUI.T(seconds) end
+    return seconds
+end
+
 local CardItemW = 268
 local CardItemH = 64
 
@@ -18,6 +36,7 @@ function GetLocalProfiles()
             InitCommand=function(self)
                 self:shadowlength(1):xy(CardItemW / 2 - 8, -3)
                 :zoom(0.75):halign(1):maxwidth(250):ztest(true)
+                if Modern then self:diffuse(ModernUI.Tokens.TextDim) end
             end,
         }
     }
@@ -46,12 +65,16 @@ function GetLocalProfiles()
                 InitCommand=function(self)
                     self:shadowlength(1):xy(CardItemW / 2 - 8, -14)
                     :zoom(0.75):halign(1):maxwidth(250):ztest(true)
+                    if Modern then self:diffuse(ModernUI.Tokens.Text) end
                 end,
             },
 
             Def.BitmapText {
                 Font="Montserrat normal 20px",
-                InitCommand=function(self) self:shadowlength(1):xy(CardItemW / 2 - 8, 14):zoom(0.75):halign(1):ztest(true) end,
+                InitCommand=function(self)
+                    self:shadowlength(1):xy(CardItemW / 2 - 8, 14):zoom(0.75):halign(1):ztest(true)
+                    if Modern then self:diffuse(ModernUI.Tokens.TextDim) end
+                end,
                 BeginCommand=function(self)
                     local NumSongsPlayed = Profile:GetNumTotalSongsPlayed()
                     self:settext(string.format(GetSongsPlayedString(NumSongsPlayed), NumSongsPlayed))
@@ -71,16 +94,56 @@ function LoadCard(cColor)
 
         Def.Sprite {
             Texture=THEME:GetPathG("", "UI/CardBackground"),
-            InitCommand=function(self) self:y(15):zoom(0.75):diffuse(cColor) end
+            InitCommand=function(self)
+                self:y(15):zoom(0.75):diffuse(cColor)
+                -- Modern mode lets the aurora show through the card body.
+                if Modern then self:diffusealpha(0.45) end
+            end
         },
 
         Def.Sprite {
             Texture=THEME:GetPathG("", "UI/CardFrame"),
-            InitCommand=function(self) self:y(-15):zoom(0.75) end,
+            InitCommand=function(self)
+                self:y(-15):zoom(0.75)
+                -- Accent-tinted frame instead of plain white art.
+                if Modern then self:diffuse(ModernUI.Accent(2)):diffusealpha(0.85) end
+            end,
         }
     }
 
     return t
+end
+
+-- The selection window. Modern mode uses one frosted plate; classic mode
+-- keeps the original three stacked black quads.
+local function SmallFrameChildren()
+    if Modern then
+        return {
+            ModernUI.GlassCard {
+                w = CardItemW, h = CardItemH,
+                alpha = 0.5, accentBar = false,
+            },
+
+            ModernUI.Hairline { w = CardItemW, y = CardItemH / 2 },
+        }
+    end
+
+    return {
+        Def.Quad {
+            InitCommand=function(self) self:zoomto(CardItemW, CardItemH) end,
+            OnCommand=function(self) self:diffuse(Color("Black")):diffusealpha(0.5) end
+        },
+
+        Def.Quad {
+            InitCommand=function(self) self:zoomto(CardItemW, CardItemH) end,
+            OnCommand=function(self) self:diffuse(Color("Black")):fadeleft(0.25):faderight(0.25):glow(color("1,1,1,0.25")) end
+        },
+
+        Def.Quad {
+            InitCommand=function(self) self:zoomto(CardItemW, CardItemH):y(-40 / 2 + 20) end,
+            OnCommand=function(self) self:diffuse(Color("Black")):fadebottom(1):diffusealpha(0.35) end
+        }
+    }
 end
 
 function LoadPlayerStuff(Player)
@@ -116,21 +179,7 @@ function LoadPlayerStuff(Player)
     t[#t+1] = Def.ActorFrame {
         Name = "SmallFrame",
         InitCommand=function(self) self:y(27) end,
-
-        Def.Quad {
-            InitCommand=function(self) self:zoomto(CardItemW, CardItemH) end,
-            OnCommand=function(self) self:diffuse(Color("Black")):diffusealpha(0.5) end
-        },
-
-        Def.Quad {
-            InitCommand=function(self) self:zoomto(CardItemW, CardItemH) end,
-            OnCommand=function(self) self:diffuse(Color("Black")):fadeleft(0.25):faderight(0.25):glow(color("1,1,1,0.25")) end
-        },
-
-        Def.Quad {
-            InitCommand=function(self) self:zoomto(CardItemW, CardItemH):y(-40 / 2 + 20) end,
-            OnCommand=function(self) self:diffuse(Color("Black")):fadebottom(1):diffusealpha(0.35) end
-        }
+        children = SmallFrameChildren()
     }
 
     t[#t+1] = Def.ActorFrame {
@@ -138,7 +187,10 @@ function LoadPlayerStuff(Player)
         Def.BitmapText {
             Font="Montserrat semibold 40px",
             Text="No profile!",
-            InitCommand=function(self) self:shadowlength(1) end
+            InitCommand=function(self)
+                self:shadowlength(1)
+                if Modern then self:diffuse(ModernUI.Tokens.TextDim) end
+            end
         }
     }
 
@@ -157,10 +209,11 @@ function LoadPlayerStuff(Player)
         Def.Quad {
             InitCommand=function(self)
                 self:zoomto(CardItemW, CardItemH):y(27)
-                :diffuse(Color("White")):diffusealpha(0)
+                :diffuse(Modern and ModernUI.Accent(1) or Color("White"))
+                :diffusealpha(0)
             end,
             OffCommand=function(self)
-                self:diffusealpha(1):easeoutexpo(0.5)
+                self:diffusealpha(1):easeoutexpo(Dur(0.5))
                 :zoomto(CardItemW * 2, CardItemH * 2):diffusealpha(0)
             end
         },
@@ -303,11 +356,11 @@ local t = Def.ActorFrame {
     children = {
         Def.ActorFrame {
             Name="P1Frame",
-            OnCommand=function(self) self:x(SCREEN_CENTER_X-200):y(SCREEN_CENTER_Y):zoom(0):easeoutexpo(1):zoom(1) end,
-            OffCommand=function(self) self:stoptweening():easeinback(0.5):zoom(0) end,
+            OnCommand=function(self) self:x(SCREEN_CENTER_X-200):y(SCREEN_CENTER_Y):zoom(0):easeoutexpo(Dur(1)):zoom(1) end,
+            OffCommand=function(self) self:stoptweening():easeinback(Dur(0.5)):zoom(0) end,
             PlayerJoinedMessageCommand=function(self, params)
                 if params.Player == PLAYER_1 then
-                    self:stoptweening():zoom(1.15):easeoutexpo(0.25):zoom(1)
+                    self:stoptweening():zoom(1.15):easeoutexpo(Dur(0.25)):zoom(1)
                 end
             end,
             children=LoadPlayerStuff(PLAYER_1)
@@ -315,11 +368,11 @@ local t = Def.ActorFrame {
 
         Def.ActorFrame {
             Name="P2Frame",
-            OnCommand=function(self) self:x(SCREEN_CENTER_X+200):y(SCREEN_CENTER_Y):zoom(0):easeoutexpo(1):zoom(1) end,
-            OffCommand=function(self) self:stoptweening():easeinback(0.5):zoom(0) end,
+            OnCommand=function(self) self:x(SCREEN_CENTER_X+200):y(SCREEN_CENTER_Y):zoom(0):easeoutexpo(Dur(1)):zoom(1) end,
+            OffCommand=function(self) self:stoptweening():easeinback(Dur(0.5)):zoom(0) end,
             PlayerJoinedMessageCommand=function(self, params)
                 if params.Player == PLAYER_2 then
-                    self:stoptweening():zoom(1.15):easeoutexpo(0.25):zoom(1)
+                    self:stoptweening():zoom(1.15):easeoutexpo(Dur(0.25)):zoom(1)
                 end
             end,
             children=LoadPlayerStuff(PLAYER_2)
