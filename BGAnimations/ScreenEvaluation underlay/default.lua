@@ -9,10 +9,24 @@ local GradeZoom = IsUsingWideScreen() and 0.5 or 0.45
 local PlateZoom = IsUsingWideScreen() and 0.8 or 0.65
 
 local Grades = { PlayerNumber_P1 = "FailF", PlayerNumber_P2 = "FailF" }
+
+-- The old scoring path in PIU/Score.GradingEval.lua builds its grade code out
+-- of the letters 3S, 2S, S, A, B, C, D and F, so a single S rank is "PassS",
+-- never "Pass1S". The keys below have to match those codes exactly: the
+-- announcer compares two lookups numerically, so a missing key means
+-- comparing nil with a number and the screen dies two seconds in. There is no
+-- 1S art in Graphics/LetterGrades either, which is the other half of the
+-- proof that the old key names were simply wrong.
 local GradePriority = {
-    Pass3S = 1, Fail3S = 2, Pass2S = 3, Fail2S = 4, Pass1S = 5, Fail1S = 6, PassA = 7, FailA = 8,
+    Pass3S = 1, Fail3S = 2, Pass2S = 3, Fail2S = 4, PassS = 5, FailS = 6, PassA = 7, FailA = 8,
     PassB = 9, FailB = 10, PassC = 11, FailC = 12, PassD = 13, FailD = 14, PassF = 15, FailF = 16
 }
+
+-- Unknown codes sort last instead of erroring.
+local function GradeRank(grade)
+    return GradePriority[grade] or 99
+end
+
 local Plates = { PlayerNumber_P1 = "RoughGame", PlayerNumber_P2 = "RoughGame" }
 
 local function InputHandler(event)
@@ -131,7 +145,7 @@ for pn in ivalues(GAMESTATE:GetHumanPlayers()) do
                 :diffusealpha(0):sleep(2):easeoutexpo(0.25)
                 :zoom(GradeZoom):diffusealpha(1)
             end
-		},
+        },
 
         Def.Sprite {
             InitCommand=function(self)
@@ -196,7 +210,7 @@ t[#t+1] = Def.ActorFrame {
         local Grade = "FailF"
 
         if ClassicGrades then
-            if GradePriority[Grades[PLAYER_1]] < GradePriority[Grades[PLAYER_2]] then
+            if GradeRank(Grades[PLAYER_1]) < GradeRank(Grades[PLAYER_2]) then
                 Grade = Grades[PLAYER_1]
             else
                 Grade = Grades[PLAYER_2]

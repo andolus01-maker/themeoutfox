@@ -9,6 +9,17 @@ local Targets = {}
 
 local ChartPreview = LoadModule("Config.Load.lua")("ChartPreview","Save/OutFoxPrefs.ini")
 
+-- Modern UI: accent halo on the focused banner + motion-token easing.
+-- NOTE: every actor added below is explicitly named. The scroll handler
+-- resolves the index label with GetChild(""), which maps to the *last*
+-- unnamed child, so adding unnamed siblings here would break it.
+local Modern  = ModernUI and ModernUI.IsModern()
+local Accent  = Modern and ModernUI.Accent(1) or nil
+local function Dur(seconds)
+    if ModernUI then return ModernUI.T(seconds) end
+    return seconds
+end
+
 -- Not load anything if no group sorts are available (catastrophic event or no songs)
 if next(GroupsList) == nil then
     AssembleGroupSorting()
@@ -130,11 +141,11 @@ local t = Def.ActorFrame {
         GAMESTATE:SetCurrentSong(Songs[SongIndex])
         SCREENMAN:GetTopScreen():AddInputCallback(InputHandler)
 
-        self:easeoutexpo(1):y(SCREEN_HEIGHT / 2 - 150)
+        self:easeoutexpo(Dur(1)):y(SCREEN_HEIGHT / 2 - 150)
     end,
 	
 	OffCommand=function(self)
-		self:easeoutexpo(1):y(SCREEN_HEIGHT / 2 + 155)
+		self:easeoutexpo(Dur(1)):y(SCREEN_HEIGHT / 2 + 155)
 	end,
     
     -- Race condition workaround (yuck)
@@ -143,11 +154,11 @@ local t = Def.ActorFrame {
 
     -- These are to control the functionality of the music wheel
     SongChosenMessageCommand=function(self)
-        self:stoptweening():easeoutexpo(1):y(SCREEN_HEIGHT / 2 + 150)
+        self:stoptweening():easeoutexpo(Dur(1)):y(SCREEN_HEIGHT / 2 + 150)
         :playcommand("Busy")
     end,
     SongUnchosenMessageCommand=function(self)
-        self:stoptweening():easeoutexpo(0.5):y(SCREEN_HEIGHT / 2 - 150)
+        self:stoptweening():easeoutexpo(Dur(0.5)):y(SCREEN_HEIGHT / 2 - 150)
         :playcommand("NotBusy")
     end,
     
@@ -249,7 +260,7 @@ for i = 1, WheelSize do
             if i == 1 or i == WheelSize then
 				UpdateBanner(self:GetChild("Banner"), Songs[Targets[i]])
             elseif tween then
-                self:easeoutexpo(0.4)
+                self:easeoutexpo(Dur(0.4))
             end
 
             -- Animate!
@@ -257,7 +268,27 @@ for i = 1, WheelSize do
             self:rotationy((SCREEN_CENTER_X - xpos - displace) * -WheelRotation)
             self:z(-math.abs(SCREEN_CENTER_X - xpos - displace) * 0.25)
             self:GetChild(""):GetChild("Index"):playcommand("Refresh")
+
+            -- Modern: light up the focused banner
+            local halo = self:GetChild("Halo")
+            if halo then halo:playcommand("Focus", { Center = (i == WheelCenter) }) end
         end,
+
+        -- Accent halo, drawn first so it reads as a glow around the banner
+        Modern and Def.Sprite {
+            Name="Halo",
+            Texture=THEME:GetPathG("", "Background/circle"),
+            InitCommand=function(self)
+                self:zoom(1.7):blend("BlendMode_Add")
+                    :diffuse(Accent):diffusealpha(0.05)
+            end,
+            FocusCommand=function(self, params)
+                local center = params and params.Center
+                self:stoptweening():linear(Dur(0.25))
+                    :diffusealpha(center and 0.3 or 0.05)
+                    :zoom(center and 2.05 or 1.7)
+            end
+        } or Def.Actor { Name="Halo" },
 
         Def.Banner {
             Name="Banner",
@@ -270,11 +301,27 @@ for i = 1, WheelSize do
         Def.ActorFrame {
             Def.Quad {
                 InitCommand=function(self)
-                    self:zoomto(60, 18):addy(-50)
-                    :diffuse(0,0,0,0.6)
-                    :fadeleft(0.3):faderight(0.3)
+                    if Modern then
+                        self:zoomto(72, 20):addy(-50)
+                        :diffuse(color("0.02,0.02,0.08,0.72"))
+                        :fadeleft(0.25):faderight(0.25)
+                    else
+                        self:zoomto(60, 18):addy(-50)
+                        :diffuse(0,0,0,0.6)
+                        :fadeleft(0.3):faderight(0.3)
+                    end
                 end
             },
+
+            Modern and Def.Quad {
+                Name="IndexBar",
+                InitCommand=function(self)
+                    self:zoomto(72, 2):addy(-40)
+                        :diffuse(Accent):diffuserightedge(ModernUI.Accent(2))
+                        :blend("BlendMode_Add"):diffusealpha(0.8)
+                        :fadeleft(0.25):faderight(0.25)
+                end
+            } or Def.Actor { Name="IndexBar" },
 
             Def.BitmapText {
                 Name="Index",

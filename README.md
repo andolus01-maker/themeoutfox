@@ -1,4 +1,5 @@
-# Infinitesimal - an Infinity-inspired OutFox theme
+# Glassmorphism - a modernised, Infinity-inspired OutFox theme
+### Glassmorphism is a fork of [Infinitesimal](https://github.com/dj505/Infinitesimal) by dj505 & SheepyChris. All of the original theme's features are intact; this fork adds a modern design system on top and is moving the look towards Pump It Up Phoenix. See [MODERN-UI.md](MODERN-UI.md) for what changed and how to configure it.
 ## **This branch is a work-in-progress and requires the latest test builds of OutFox Alpha V to function as intended.**
 ### Make sure to drop by the Project OutFox Discord server and grab the appropriate tester roles to gain access to the latest builds, and remember to properly report bugs and issues while you're at it!
 
@@ -6,8 +7,10 @@
 
 ## [Discord server is now available for more development insights and discussion!](https://discord.gg/ex6e4jNm6s)
 
-## About Infinitesimal
-This theme is inspired by Pump It Up Infinity, an uncommon StepMania-based spin-off developed by Team Infinity and licensed by Andamiro. The current goals are to replicate the look and feel of Infinity while sprinkling in new additions and quality of life improvements, utilizing original assets when possible, bringing high performance + cross-platform support to the table with Project OutFox and widening the idea and accessibility of custom Pump It Up content.
+## About Glassmorphism
+The base theme is inspired by Pump It Up Infinity, an uncommon StepMania-based spin-off developed by Team Infinity and licensed by Andamiro. The original goals were to replicate the look and feel of Infinity while sprinkling in new additions and quality of life improvements, utilizing original assets when possible, bringing high performance + cross-platform support to the table with Project OutFox and widening the idea and accessibility of custom Pump It Up content.
+
+This fork keeps all of that and layers a configurable modern interface over it: a procedural animated background, glassmorphism chrome, central design tokens and a Phoenix-leaning navy/cyan palette. Setting `Style = "classic"` restores the original Infinity look on every screen.
 
 ## Requirements
 * [Project OutFox Alpha 0.5.0-pre042 or newer](https://projectoutfox.com/downloads)
@@ -18,6 +21,8 @@ Older StepMania versions such as `5.0.12`, `5.1b2` and `5.1-new` are not support
 Since this theme is currently on a rolling release, we highly recommend downloading the theme through GitHub Desktop (or `git` for Linux users) and pull subsequent updates that are pushed to the repository. If you're unable to do so, you can also download from the `Code > Download ZIP` button on the main page and extract the .zip file to your OutFox [Themes](https://outfox.wiki/user-guide/config/folders/#themes) folder.
 
 **If you are upgrading from a previous version by `Download ZIP`, fully delete the old folder first. Do not merge the new folder into the old.**
+
+**Note on renaming:** OutFox identifies a theme by its folder name, while the name shown in the theme selector comes from `DisplayName` in `themeinfo.ini`. If you rename the folder, the engine treats it as a different theme and your previously saved theme preferences will not carry over.
 
 ## Theme Features
 * Accurate asymmetrical timing windows scoring and lifebar mechanics to K-Pump
@@ -30,9 +35,10 @@ Since this theme is currently on a rolling release, we highly recommend download
 * Measures and song progress display
 * Multiply, Automatic and Constant scroll speeds
 * Visualize chart information while selecting a song, previews are currently WIP
+* Modern interface layer with selectable palette, accent colour, motion level and glass panels
 
 ## Theme-Specific Toggles
-The following features can be configured via the Infinitesimal Options submenu of the operator menu:
+The following features can be configured via the theme's options submenu of the operator menu:
 * Center Chart List: if there are less charts than the maximum visible number, the charts will be centered to the display.
 * Chart Preview: preview the selected chart on the select music screen.
 * Image Preview Only: videos will not be displayed while selecting a song, helps with performance on low-end hardware and/or memory usage.
@@ -46,7 +52,11 @@ The following features can be configured via the Infinitesimal Options submenu o
 * Autogen Basic Mode: allow the game to auto generate the list of songs for Basic Mode, disable this if you plan to use a handpicked list.
 * Wrap Chart List Scrolling: when scrolling past the beginning or end of the chart list, wrap the current selection to the opposite end.
 
+The modern interface adds Visual Style, Accent Colour, Motion and Glass Panels to the Interface options screen. See [MODERN-UI.md](MODERN-UI.md) for the settings that are still file-only.
+
 ## Screenshots
+The screenshots below are from the original Infinitesimal look, which is still available via `Style = "classic"`.
+
 ![Title](https://github.com/dj505/Infinitesimal/assets/12992355/ef053e35-70b2-466c-8244-162ae017b61a)
 ![Profile](https://github.com/dj505/Infinitesimal/assets/12992355/25847cb5-3e9a-4b58-9177-71dec52e176f)
 ![BasicMode](https://github.com/dj505/Infinitesimal/assets/12992355/12dbe987-f561-4f14-9770-124b512ca761)
@@ -57,10 +67,12 @@ The following features can be configured via the Infinitesimal Options submenu o
 
 
 ## Languages:
-Currently, Infinitesimal supports the following languages:
+Currently, the theme supports the following languages:
 * English
 * Brazilian Portuguese
 * Polish
+* Simplified Chinese
+* Traditional Chinese
 
 ## Additional Resources
 If you're looking for assets such as more noteskins or folder icons from StepF2/P1, you can grab them [here](https://drive.google.com/drive/folders/1pO9rbaPUwTTDFuEo_4tX8S1BEwmfukeF?usp=sharing). Keep in mind these are independent from the theme and are only here for accessibility purposes to newcomers.
@@ -70,12 +82,14 @@ The theme currently has a few limitations that are beyond our reach. Here is a l
 * Some chart effects will be missing or broken from incomplete parsing
 * Chart previews are very experimental - some styles might not load/show properly and your game might crash on edge cases
 * Switching timing modes does not update the list of judgement graphics, simply reloading the current screen or changing screens will regenerate the list
-* Infinitesimal makes use of OutFox Alpha V exclusive features. It is NOT recommended to use it with Alpha 4 LTS
+* This theme makes use of OutFox Alpha V exclusive features. It is NOT recommended to use it with Alpha 4 LTS
+* Panels cannot have rounded corners without shipping additional textures, so depth is currently expressed with gradients, hairlines and a diagonal shear
 
 Hopefully all of these should be gone soon with future Project OutFox developments and improvements!
 
 ## Special thanks
 This theme wouldn't be here if it weren't for the help of the following people:
+* dj505 and SheepyChris (creators of Infinitesimal, the theme this fork is built on)
 * JoseVarelaP (loads of code optimization and refactoring, suggestions and development assistance)
 * Luizsan (creator of PIU Delta / member of Team Infinity and SSC, many notes and examples taken from his work)
 * Jousway and Squirrel (development assistance, pump bug squashing)
